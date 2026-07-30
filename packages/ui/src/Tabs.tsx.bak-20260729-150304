@@ -1,0 +1,71 @@
+'use client';
+import { createContext, useContext, useState, ReactNode } from 'react';
+import { cn } from './utils';
+
+export interface TabsProps {
+  defaultValue: string;
+  children: ReactNode;
+  className?: string;
+}
+
+const TabsContext = createContext<{ value: string; setValue: (v: string) => void }>({
+  value: '',
+  setValue: () => {},
+});
+
+export const Tabs = ({ defaultValue, children, className = '' }: TabsProps) => {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    <TabsContext.Provider value={{ value, setValue }}>
+      <div className={className}>{children}</div>
+    </TabsContext.Provider>
+  );
+};
+
+export interface TabsListProps {
+  className?: string;
+  children: ReactNode;
+}
+
+export const TabsList = ({ className = '', children }: TabsListProps) => (
+  <div className={cn('flex bg-[#F4E8F7] rounded-xl p-1', className)}>{children}</div>
+);
+
+export interface TabsTriggerProps {
+  value: string;
+  children: ReactNode;
+  className?: string;
+  onClick?: () => void;
+}
+
+export const TabsTrigger = ({ value, children, className = '', onClick }: TabsTriggerProps) => {
+  const ctx = useContext(TabsContext);
+  const active = ctx.value === value;
+  return (
+    <button
+      className={cn(
+        'flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all',
+        active ? 'bg-white shadow-sm text-[#5E4B8B]' : 'text-[#B8A1D9] hover:text-[#5E4B8B]',
+        className
+      )}
+      onClick={() => {
+        ctx.setValue(value);
+        if (onClick) onClick();
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+
+export interface TabsContentProps {
+  value: string;
+  children: ReactNode;
+  className?: string;
+}
+
+export const TabsContent = ({ value, children, className = '' }: TabsContentProps) => {
+  const ctx = useContext(TabsContext);
+  if (ctx.value !== value) return null;
+  return <div className={cn('mt-4', className)}>{children}</div>;
+};

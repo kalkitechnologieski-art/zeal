@@ -1,0 +1,1 @@
+FROM node:20-alpine AS builder\nWORKDIR /app\nCOPY . .\nRUN pnpm install && pnpm build --filter=api\nFROM node:20-alpine\nWORKDIR /app\nCOPY --from=builder /app/apps/api/dist ./dist\nCOPY --from=builder /app/apps/api/package.json ./package.json\nRUN npm install --production\nEXPOSE 3001\nCMD ["node", "dist/main.js"]

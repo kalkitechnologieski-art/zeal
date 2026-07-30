@@ -1,0 +1,29 @@
+export interface User {
+  id: string; email: string; name?: string; role: "USER" | "HEALER" | "ADMIN";
+  sparks: number; createdAt: Date; updatedAt: Date;
+}
+export interface ConsultantProfile {
+  id: string; userId: string; name: string; username: string; bio: string;
+  avatar: string; category: "astrologer" | "psychologist" | "tarot" | "numerologist" | "palmist" | "vastu" | "reiki" | "life_coach" | "healer";
+  isVerified: boolean; isOnline: boolean; perMinuteRate: number;
+  experience: number; rating: number; totalConsultations: number; sparks: number;
+  languages: string[]; specialties: string[];
+  faith: "HINDU" | "ISLAM" | "CHRISTIAN" | "BUDDHIST" | "JEWISH" | "SIKH" | "OTHER";
+}
+export interface Post {
+  id: string; content: string; imageUrl?: string; authorId: string;
+  cheerCount: number; commentCount: number; shareCount: number; createdAt: Date;
+}
+export interface SparkActivity {
+  id: string; type: "cheer" | "comment" | "share" | "follow" | "mention";
+  actor: { id: string; username: string; avatar: string };
+  target?: { id: string; content: string };
+  sparksEarned: number; createdAt: Date;
+}
+export interface FreeService {
+  id: string; name: string; description: string; icon: string;
+  route: string; isAIPowered: boolean;
+}
+export interface CategorySection {
+  id: string; name: string; icon: string; consultants: ConsultantProfile[];
+}

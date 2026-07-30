@@ -1,0 +1,1 @@
+FROM node:20-alpine AS builder\nWORKDIR /app\nCOPY . .\nRUN pnpm install && pnpm build --filter=web\nFROM node:20-alpine\nWORKDIR /app\nCOPY --from=builder /app/apps/web/.next ./.next\nCOPY --from=builder /app/apps/web/public ./public\nCOPY --from=builder /app/apps/web/package.json ./package.json\nRUN npm install --production\nEXPOSE 3000\nCMD ["npm", "start"]

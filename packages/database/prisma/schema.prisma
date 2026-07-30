@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  name                  String?
+  role                  String   @default("USER")
+  sparks                Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  healerProfile         HealerProfile?
+  posts                 Post[]
+  comments              Comment[]
+  cheers                Cheer[]
+  consultations         Consultation[]
+  bookings              Booking[]
+  sparkTransactions     SparkTransaction[]
+  referralsAsReferrer   Referral[] @relation("Referrer")
+  referralsAsReferred   Referral[] @relation("Referred")
+}
+
+model HealerProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  specialties String[]
+  languages   String[]
+  bio         String?
+  perMinuteRate Float?
+  isVerified  Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  faith       String   @default("HINDU")
+  rating      Float    @default(0)
+  totalConsultations Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  consultations Consultation[]
+  bookings      Booking[]
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  content     String
+  mediaUrl    String?
+  mediaType   String?
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  cheerCount  Int      @default(0)
+  commentCount Int     @default(0)
+  shareCount  Int      @default(0)
+  isPinned    Boolean  @default(false)
+  isFlagged   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  comments    Comment[]
+  cheers      Cheer[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId  String?  @map("parent_id")
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cheer {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Consultation {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  healerId        String
+  healer          HealerProfile @relation(fields: [healerId], references: [id])
+  status          String   @default("REQUESTED")
+  type            String
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  endedAt         DateTime?
+  durationMinutes Int      @default(0)
+  amount          Float    @default(0)
+  platformFee     Float    @default(0)
+  healerEarning   Float    @default(0)
+  rating          Int?
+  review          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  booking         Booking?
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  consultationId  String   @unique
+  consultation    Consultation @relation(fields: [consultationId], references: [id])
+  healerId        String
+  healer          HealerProfile @relation(fields: [healerId], references: [id])
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  scheduledAt     DateTime
+  meetingLink     String?
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SparkTransaction {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  amount          Int
+  type            String
+  referenceId     String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+}
+
+model Referral {
+  id              String   @id @default(cuid())
+  referrerId      String
+  referrer        User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredId      String   @unique
+  referred        User     @relation("Referred", fields: [referredId], references: [id])
+  type            String
+  status          String   @default("PENDING")
+  sparksEarned    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

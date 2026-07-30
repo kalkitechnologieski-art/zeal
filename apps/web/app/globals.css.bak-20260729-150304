@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F4E8F7;
+  --foreground: #5E4B8B;
+  --card: #FFFFFF;
+  --border: #E1C5E7;
+  --primary: #9D7DC5;
+  --primary-dark: #533AFD;
+  --text-muted: #B8A1D9;
+  --spark: #FFD700;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.safe-area-padding-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

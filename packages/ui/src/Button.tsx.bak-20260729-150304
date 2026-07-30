@@ -1,0 +1,38 @@
+import { forwardRef, ButtonHTMLAttributes } from 'react';
+import { cn } from './utils';
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className = '', variant = 'primary', size = 'md', children, ...props }, ref) => {
+    const variants = {
+      primary: 'bg-[#9D7DC5] text-white hover:bg-[#533AFD]',
+      secondary: 'bg-[#F4E8F7] text-[#5E4B8B] hover:bg-[#E1C5E7]',
+      outline: 'border border-[#9D7DC5] text-[#9D7DC5] hover:bg-[#F4E8F7]',
+      ghost: 'text-[#5E4B8B] hover:bg-[#F4E8F7]',
+    };
+    const sizes = {
+      sm: 'px-3 py-1.5 text-sm',
+      md: 'px-4 py-2 text-base',
+      lg: 'px-6 py-3 text-lg',
+    };
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          'rounded-xl font-medium transition-all',
+          variants[variant] || variants.primary,
+          sizes[size] || sizes.md,
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+Button.displayName = 'Button';

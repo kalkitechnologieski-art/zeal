@@ -1,0 +1,25 @@
+import { forwardRef, ImgHTMLAttributes } from 'react';
+import { cn } from './utils';
+
+export interface AvatarProps extends ImgHTMLAttributes<HTMLImageElement> {
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}
+
+export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(
+  ({ className = '', size = 'md', ...props }, ref) => {
+    const sizes = {
+      sm: 'w-8 h-8',
+      md: 'w-12 h-12',
+      lg: 'w-16 h-16',
+      xl: 'w-24 h-24',
+    };
+    return (
+      <img
+        ref={ref}
+        className={cn('rounded-full object-cover', sizes[size] || sizes.md, className)}
+        {...props}
+      />
+    );
+  }
+);
+Avatar.displayName = 'Avatar';

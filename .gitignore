@@ -1,0 +1,2 @@
+node_modules\ndist\n.next\n.env\n.env.local\n*.log\n.DS_Store\npackage-lock.json\ncoverage\n.vercel
+node_modules/

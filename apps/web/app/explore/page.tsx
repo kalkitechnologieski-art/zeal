@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useState, useCallback, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { Search, Hash, User, Image, TrendingUp } from "lucide-react";

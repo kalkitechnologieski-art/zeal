@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+export const dynamic = 'force-dynamic';
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";

@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { SignUp } from "@clerk/nextjs";
 export default function RegisterPage() {
   return <div className="flex min-h-screen items-center justify-center bg-[#F4E8F7]"><SignUp /></div>;

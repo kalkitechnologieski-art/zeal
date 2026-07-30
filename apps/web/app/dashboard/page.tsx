@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";

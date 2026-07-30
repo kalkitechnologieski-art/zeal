@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";

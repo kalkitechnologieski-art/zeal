@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 import { Sparkles, Trophy } from "lucide-react";
 import { QuestCard } from "@/components/quests/QuestCard";

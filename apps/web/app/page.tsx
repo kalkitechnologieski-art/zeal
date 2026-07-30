@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+export const dynamic = 'force-dynamic';
 import { redirect } from "next/navigation";
 import { HomeClient } from "@/app/HomeClient";
 export default async function HomePage() {

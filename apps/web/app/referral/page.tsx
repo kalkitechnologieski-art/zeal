@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ReferralCard } from "@/components/referral/ReferralCard";

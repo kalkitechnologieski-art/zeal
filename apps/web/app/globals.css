@@ -23,7 +23,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -55,5 +55,167 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    height: 100%;
+    overflow-y: scroll;
   }
+}
+
+/* ========== PREMIUM SCROLLING ========== */
+
+/* Ensure scrolling works properly */
+html {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height for mobile */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Main content area – allows scroll and has extra bottom padding */
+main {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: 3.5rem; /* 3.5cm extra bottom padding */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* For mobile devices, add more bottom padding to avoid nav overlap */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: 5rem;
+  }
+}
+
+/* Ensure content can grow beyond viewport */
+#__next {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ========== PREMIUM SCROLLBAR ========== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-[#F4E8F7] dark:bg-gray-800;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-[#9D7DC5] rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-[#533AFD];
+}
+
+/* ========== PREMIUM BUTTONS & LINKS ========== */
+
+/* Premium "See All" link */
+.see-all-link {
+  @apply text-sm font-medium text-[#9D7DC5] dark:text-[#9D7DC5] relative inline-flex items-center gap-1;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.see-all-link::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-[2px] bg-[#9D7DC5] dark:bg-[#9D7DC5] transition-all duration-300;
+}
+
+.see-all-link:hover {
+  @apply text-[#533AFD] dark:text-[#533AFD] gap-2;
+}
+
+.see-all-link:hover::after {
+  width: 100%;
+}
+
+.see-all-link .arrow {
+  @apply transition-transform duration-300;
+}
+
+.see-all-link:hover .arrow {
+  @apply translate-x-1;
+}
+
+/* Premium CTA Button */
+.cta-button {
+  @apply relative px-6 py-3 rounded-xl font-semibold text-white overflow-hidden transition-all duration-300;
+  background: linear-gradient(135deg, #9D7DC5, #533AFD);
+  box-shadow: 0 4px 15px rgba(83, 58, 253, 0.35);
+}
+
+.cta-button::before {
+  content: '';
+  @apply absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300;
+}
+
+.cta-button:hover {
+  @apply scale-[1.02] shadow-xl;
+  box-shadow: 0 6px 25px rgba(83, 58, 253, 0.5);
+}
+
+.cta-button:hover::before {
+  @apply opacity-100;
+}
+
+.cta-button:active {
+  @apply scale-[0.98];
+}
+
+/* Premium Secondary Button */
+.btn-secondary {
+  @apply relative px-6 py-3 rounded-xl font-semibold text-[#5E4B8B] dark:text-white bg-[#F4E8F7] dark:bg-gray-800 border border-[#E1C5E7] dark:border-gray-700;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-secondary:hover {
+  @apply border-[#9D7DC5] dark:border-[#9D7DC5] shadow-md scale-[1.02] bg-white dark:bg-gray-700;
+}
+
+.btn-secondary:active {
+  @apply scale-[0.98];
+}
+
+/* ========== SAFE AREA ========== */
+
+.safe-area-padding-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* ========== RESPONSIVE UTILITIES ========== */
+
+/* Hide scrollbar for horizontal scrolling elements */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ========== PREMIUM CARDS ========== */
+
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+}
+
+/* ========== GLASSMORPHISM ========== */
+
+.glass {
+  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm;
+}
+
+/* ========== GRADIENT TEXT ========== */
+
+.gradient-text {
+  @apply bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] bg-clip-text text-transparent;
 }

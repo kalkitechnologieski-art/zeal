@@ -12,6 +12,7 @@
   "dependencies": {
     "@base-ui/react": "1.6.0",
     "@clerk/nextjs": "^6.0.0",
+    "@hookform/resolvers": "5.5.7",
     "@zeal/types": "^0.0.1",
     "@zeal/ui": "^0.0.1",
     "class-variance-authority": "0.7.1",
@@ -20,9 +21,13 @@
     "next": "^16.2.12",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "7.83.0",
+    "react-is": "19.2.8",
+    "recharts": "3.10.1",
     "shadcn": "4.16.0",
     "tailwind-merge": "3.6.0",
-    "tw-animate-css": "1.4.0"
+    "tw-animate-css": "1.4.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

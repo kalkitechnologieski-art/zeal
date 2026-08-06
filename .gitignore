@@ -35,3 +35,6 @@ Thumbs.db
 *.temp
 nul
 NUL
+project-zeal-full-export.txt
+.env.production
+.env.production.template

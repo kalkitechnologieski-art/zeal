@@ -1,28 +1,9 @@
 export interface User {
   id: string;
   email: string;
-  avatar?: string;
   name?: string;
   role: "USER" | "HEALER" | "ADMIN";
   sparks: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface HealerProfile {
-  id: string;
-  userId: string;
-  user: User;
-  specialties: string[];
-  languages: string[];
-  bio?: string;
-  perMinuteRate: number;
-  isVerified: boolean;
-  isActive: boolean;
-  faith: "HINDU" | "ISLAM" | "CHRISTIAN" | "BUDDHIST" | "JEWISH" | "SIKH" | "OTHER";
-  rating: number;
-  totalConsultations: number;
-  earnings: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +26,8 @@ export interface ConsultantProfile {
   languages: string[];
   specialties: string[];
   faith: "HINDU" | "ISLAM" | "CHRISTIAN" | "BUDDHIST" | "JEWISH" | "SIKH" | "OTHER";
+  isAI?: boolean;    // Added for AI consultants
+  isPaid?: boolean;  // Added for AI consultants
 }
 
 export interface Post {
@@ -70,32 +53,20 @@ export interface SparkActivity {
 export interface SparkBazaarListing {
   id: string;
   userId: string;
-  user: User;
+  user: {
+    id: string;
+    name?: string;
+    email: string;
+    avatar?: string;
+    sparks: number;
+    role: string;
+  };
   sparks: number;
   rank: number;
   tier: "bronze" | "silver" | "gold";
   isAvailable: boolean;
-}
-
-export interface BazaarBid {
-  id: string;
-  listingId: string;
-  healerId: string;
-  amount: number;
-  status: "pending" | "accepted" | "rejected" | "completed";
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Referral {
-  id: string;
-  referrerId: string;
-  referredId: string;
-  type: "user" | "healer";
-  status: "pending" | "completed" | "expired";
-  sparksEarned: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Quest {
@@ -107,6 +78,8 @@ export interface Quest {
   reward: number;
   icon: string;
   isActive: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface QuestProgress {
@@ -118,51 +91,4 @@ export interface QuestProgress {
   completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface PayoutRequest {
-  id: string;
-  healerId: string;
-  amount: number;
-  status: "pending" | "approved" | "rejected" | "completed";
-  bankDetails: {
-    accountNumber: string;
-    ifscCode: string;
-    accountHolderName: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Consultation {
-  id: string;
-  userId: string;
-  healerId: string;
-  status: "REQUESTED" | "SCHEDULED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-  type: "CHAT" | "VOICE" | "VIDEO";
-  scheduledAt?: Date;
-  durationMinutes: number;
-  amount: number;
-  platformFee: number;
-  healerEarning: number;
-  rating?: number;
-  review?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface FreeService {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  route: string;
-  isAIPowered: boolean;
-}
-
-export interface CategorySection {
-  id: string;
-  name: string;
-  icon: string;
-  consultants: ConsultantProfile[];
 }

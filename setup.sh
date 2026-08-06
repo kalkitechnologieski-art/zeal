@@ -1,173 +1,97 @@
 #!/bin/bash
 # =============================================================================
-# FIX INTERNAL SERVER ERROR ON VERCEL
+# PROJECT ZEAL – CLEAN SECRETS & FORCE PUSH
+# =============================================================================
+# This script removes real credentials from tracked files, amends the commit,
+# and force-pushes the clean history to GitHub.
 # =============================================================================
 
 set -euo pipefail
 
-echo "🔧 Fixing Internal Server Error issues..."
+echo "═══════════════════════════════════════════════════════════════════════════"
+echo "  🧹 CLEANING SECRETS & FORCE PUSHING TO ORIGIN"
+echo "═══════════════════════════════════════════════════════════════════════════"
 
-# ============================================================================
-# 1. IMPROVE PROXY.TS WITH ERROR HANDLING
-# ============================================================================
-echo "📝 Updating proxy.ts with error handling..."
+# ----------------------------------------------------------------------------
+# 1. Replace real credentials with placeholders
+# ----------------------------------------------------------------------------
+echo "🔍 Replacing real credentials with placeholders..."
 
-cat > apps/web/proxy.ts << 'EOF'
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+# Patterns to match – common API keys
+PATTERNS=(
+  "rzp_live_[a-zA-Z0-9]*"
+  "rzp_test_[a-zA-Z0-9]*"
+  "sk_live_[a-zA-Z0-9]*"
+  "sk_test_[a-zA-Z0-9]*"
+  "pk_live_[a-zA-Z0-9]*"
+  "pk_test_[a-zA-Z0-9]*"
+  "gsk_[a-zA-Z0-9]*"
+  "AGNES_[a-zA-Z0-9]*"
+  "ZHIPU_[a-zA-Z0-9]*"
+  "LIVEKIT_[a-zA-Z0-9]*"
+  "UPSTASH_[a-zA-Z0-9]*"
+  "R2_[a-zA-Z0-9]*"
+)
 
-const isPublicRoute = createRouteMatcher(["/", "/login(.*)", "/register(.*)", "/api/webhooks(.*)"]);
+# Files to clean
+FILES=(
+  ".env.production.template"
+  ".env.example"
+)
 
-export default clerkMiddleware(async (auth, request) => {
-  try {
-    if (!isPublicRoute(request)) {
-      await auth.protect();
-    }
-    return NextResponse.next();
-  } catch (error) {
-    console.error("Clerk middleware error:", error);
-    // Redirect to login on auth error
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-});
+for file in "${FILES[@]}"; do
+  if [ -f "$file" ]; then
+    echo "   Cleaning $file ..."
+    for pattern in "${PATTERNS[@]}"; do
+      sed -i "s/$pattern/PLACEHOLDER/g" "$file"
+    done
+  fi
+done
 
-export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
-  ],
-};
-EOF
+# ----------------------------------------------------------------------------
+# 2. Remove the generated export file and add to .gitignore
+# ----------------------------------------------------------------------------
+echo "🗑️ Removing generated export file..."
+rm -f project-zeal-full-export.txt
 
-echo "✅ proxy.ts updated with error handling."
+echo "📝 Adding export file to .gitignore..."
+if ! grep -q "project-zeal-full-export.txt" .gitignore; then
+  echo "project-zeal-full-export.txt" >> .gitignore
+fi
 
-# ============================================================================
-# 2. ADD GLOBAL ERROR PAGE (if missing)
-# ============================================================================
-echo "📝 Creating global-error.tsx..."
+# Also ensure .env.production* is ignored (if not already)
+if ! grep -q ".env.production" .gitignore; then
+  echo ".env.production" >> .gitignore
+  echo ".env.production.template" >> .gitignore
+fi
 
-mkdir -p apps/web/app
-cat > apps/web/app/global-error.tsx << 'EOF'
-'use client';
+# ----------------------------------------------------------------------------
+# 3. Stage all changes
+# ----------------------------------------------------------------------------
+echo "📦 Staging all changes..."
+git add -A
 
-import { useEffect } from 'react';
+# ----------------------------------------------------------------------------
+# 4. Amend the previous commit (without changing message)
+# ----------------------------------------------------------------------------
+echo "✏️ Amending commit to remove secrets..."
+git commit --amend --no-edit
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    console.error('Global error:', error);
-  }, [error]);
+# ----------------------------------------------------------------------------
+# 5. Force push to origin/master (or current branch)
+# ----------------------------------------------------------------------------
+BRANCH=$(git branch --show-current)
+echo "🚀 Force pushing to origin/$BRANCH ..."
+git push origin "$BRANCH" --force
 
-  return (
-    <html>
-      <body>
-        <div className="flex min-h-screen flex-col items-center justify-center p-4">
-          <h2 className="text-2xl font-bold text-red-600">Something went wrong!</h2>
-          <p className="mt-2 text-gray-600">{error.message || 'An unexpected error occurred.'}</p>
-          <button
-            onClick={reset}
-            className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Try again
-          </button>
-          <p className="mt-4 text-sm text-gray-500">
-            Please check the Vercel function logs for more details.
-          </p>
-        </div>
-      </body>
-    </html>
-  );
-}
-EOF
-
-echo "✅ global-error.tsx created."
-
-# ============================================================================
-# 3. ADD HEALTH CHECK ROUTE
-# ============================================================================
-echo "📝 Creating health check API route..."
-
-mkdir -p apps/web/app/api/health
-cat > apps/web/app/api/health/route.ts << 'EOF'
-import { NextResponse } from 'next/server';
-
-export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-    clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? 'set' : 'missing',
-    clerkSecretKey: process.env.CLERK_SECRET_KEY ? 'set' : 'missing',
-    databaseUrl: process.env.DATABASE_URL ? 'set' : 'missing',
-  });
-}
-EOF
-
-echo "✅ Health check route created."
-
-# ============================================================================
-# 4. UPDATE .env.production WITH REAL VALUES
-# ============================================================================
-echo "📦 Creating .env.production with your Clerk keys..."
-
-cat > .env.production << 'EOF'
-# Clerk Authentication (your real keys)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9wLXN0YXJsaW5nLTM2LmNsZXJrLmFjY291bnRzLmRldiQ
-CLERK_SECRET_KEY=sk_test_9G4JQYWjs9hcyFqcngJnb5qDey12SWRNVxV6zrcxWN
-
-# Other placeholder values (replace as needed)
-DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/zeal
-UPSTASH_REDIS_REST_URL=https://placeholder.upstash.io
-UPSTASH_REDIS_REST_TOKEN=placeholder
-R2_ACCOUNT_ID=placeholder
-R2_ACCESS_KEY_ID=placeholder
-R2_SECRET_ACCESS_KEY=placeholder
-R2_BUCKET_NAME=zeal
-R2_PUBLIC_URL=https://placeholder.r2.dev
-RAZORPAY_KEY_ID=rzp_placeholder
-RAZORPAY_KEY_SECRET=placeholder
-NEXT_PUBLIC_WS_URL=wss://placeholder.zeal.com
-LIVEKIT_API_KEY=placeholder
-LIVEKIT_API_SECRET=placeholder
-LIVEKIT_WS_URL=wss://placeholder.livekit.zeal.com
-GROQ_API_KEY=gsk_placeholder
-EOF
-
-echo "✅ .env.production created."
-
-# ============================================================================
-# 5. COMMIT AND PUSH
-# ============================================================================
-echo "📝 Committing and pushing changes..."
-git add .
-git commit -m "fix: add error handling, global error page, health check, and env file"
-git push origin master
-
-echo "✅ Done! Deploy again on Vercel."
-
+# ----------------------------------------------------------------------------
+# 6. Success message
+# ----------------------------------------------------------------------------
 echo ""
 echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  📋 NEXT STEPS:"
+echo "  ✅ SUCCESS: Clean history pushed to origin/$BRANCH"
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo ""
-echo "1. Vercel will automatically redeploy. Check the logs for errors."
+echo "🔐 Now add your real credentials as environment variables in Vercel,"
+echo "   Fly.io, or your hosting platform – NOT in the repository."
 echo ""
-echo "2. Visit the health check endpoint:"
-echo "   https://zeal.vercel.app/api/health"
-echo ""
-echo "3. If the error persists, check Vercel Function Logs:"
-echo "   Vercel Dashboard → Project → Deployments → Click latest → Functions"
-echo ""
-echo "4. Ensure environment variables are set in Vercel:"
-echo "   Vercel Dashboard → Project → Settings → Environment Variables"
-echo ""
-echo "   Must set:"
-echo "   - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-echo "   - CLERK_SECRET_KEY"
-echo ""
-echo "═══════════════════════════════════════════════════════════════════════════"

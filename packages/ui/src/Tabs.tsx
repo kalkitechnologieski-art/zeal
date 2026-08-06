@@ -1,89 +1,54 @@
 "use client";
-import { createContext, useContext, useState, ReactNode, MouseEvent } from "react";
+
+import * as React from "react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { cn } from "./utils";
 
-interface TabsContextType {
-  value: string;
-  setValue: (v: string) => void;
-}
+const Tabs = TabsPrimitive.Root;
 
-const TabsContext = createContext<TabsContextType>({
-  value: "",
-  setValue: () => {},
-});
+const TabsList = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "inline-flex h-10 items-center justify-center rounded-xl bg-[#F4E8F7] p-1 text-[#B8A1D9]",
+      className
+    )}
+    {...props}
+  />
+));
+TabsList.displayName = TabsPrimitive.List.displayName;
 
-export interface TabsProps {
-  defaultValue: string;
-  children: ReactNode;
-  className?: string;
-  onValueChange?: (value: string) => void;
-}
+const TabsTrigger = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D7DC5] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-[#5E4B8B] data-[state=active]:shadow-sm",
+      className
+    )}
+    {...props}
+  />
+));
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 
-export const Tabs = ({ defaultValue, children, className = "", onValueChange }: TabsProps) => {
-  const [value, setValue] = useState(defaultValue);
+const TabsContent = React.forwardRef<
+  React.ElementRef<typeof TabsPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+>(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-4 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D7DC5] focus-visible:ring-offset-2",
+      className
+    )}
+    {...props}
+  />
+));
+TabsContent.displayName = TabsPrimitive.Content.displayName;
 
-  const handleSetValue = (newValue: string) => {
-    setValue(newValue);
-    if (onValueChange) onValueChange(newValue);
-  };
-
-  return (
-    <TabsContext.Provider value={{ value, setValue: handleSetValue }}>
-      <div className={className}>{children}</div>
-    </TabsContext.Provider>
-  );
-};
-
-export interface TabsListProps {
-  className?: string;
-  children: ReactNode;
-}
-
-export const TabsList = ({ className = "", children }: TabsListProps) => (
-  <div className={cn("flex bg-[#F4E8F7] rounded-xl p-1", className)}>{children}</div>
-);
-
-export interface TabsTriggerProps {
-  value: string;
-  children: ReactNode;
-  className?: string;
-  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
-}
-
-export const TabsTrigger = ({ value, children, className = "", onClick }: TabsTriggerProps) => {
-  const ctx = useContext(TabsContext);
-  const active = ctx.value === value;
-
-  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
-    ctx.setValue(value);
-    if (onClick) onClick(e);
-  };
-
-  return (
-    <button
-      className={cn(
-        "flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all",
-        active ? "bg-white shadow-sm text-[#5E4B8B]" : "text-[#B8A1D9] hover:text-[#5E4B8B]",
-        className
-      )}
-      onClick={handleClick}
-      role="tab"
-      aria-selected={active}
-      tabIndex={active ? 0 : -1}
-    >
-      {children}
-    </button>
-  );
-};
-
-export interface TabsContentProps {
-  value: string;
-  children: ReactNode;
-  className?: string;
-}
-
-export const TabsContent = ({ value, children, className = "" }: TabsContentProps) => {
-  const ctx = useContext(TabsContext);
-  if (ctx.value !== value) return null;
-  return <div className={cn("mt-4", className)}>{children}</div>;
-};
+export { Tabs, TabsList, TabsTrigger, TabsContent };

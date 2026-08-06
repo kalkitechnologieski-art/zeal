@@ -1,0 +1,79 @@
+═══════════════════════════════════════════════════════════════════════════
+  PROJECT ZEAL – AUDIT REPORT
+═══════════════════════════════════════════════════════════════════════════
+
+Date: Mon, Aug  3, 2026  6:40:49 PM
+Project: /d/zeal
+
+───────────────────────────────────────────────────────────────────────────
+  SUMMARY
+───────────────────────────────────────────────────────────────────────────
+  Total Errors Found:     14
+  Total Warnings:         1
+  Auto-Fixed Issues:      1
+
+───────────────────────────────────────────────────────────────────────────
+  DETAILED FINDINGS
+───────────────────────────────────────────────────────────────────────────
+
+TypeScript Errors:
+  File: ts-errors.txt (if exists)
+
+ESLint Errors:
+  File: eslint-output.txt (if exists)
+
+Duplicate Imports:
+  File: duplicate-imports.txt (if exists)
+
+Missing Link Imports:
+  Files fixed: 1
+
+Missing ConsultantCategory Imports:
+  Files fixed: 4
+
+Missing React Imports:
+  Files fixed: 4
+
+Environment Variables:
+  .env.local: Present
+
+Outdated Dependencies:
+  @clerk/nextjs          6.39.6    6.39.6    7.6.4  apps/admin/node_modules/@clerk/nextjs          admin@0.1.0
+@clerk/nextjs          6.39.6    6.39.6    7.6.4  apps/web/node_modules/@clerk/nextjs            web@0.1.0
+@clerk/nextjs           7.6.3     7.6.4    7.6.4  node_modules/@clerk/nextjs                     zeal
+@hookform/resolvers     5.5.7     5.5.7    5.7.1  node_modules/@hookform/resolvers               admin@0.1.0
+@hookform/resolvers     5.5.7     5.5.7    5.7.1  node_modules/@hookform/resolvers               web@0.1.0
+@prisma/client         5.22.0    5.22.0    7.9.1  packages/database/node_modules/@prisma/client  database@npm:@zeal/database@0.0.1
+@types/node          20.19.43  20.19.43   26.1.2  node_modules/@types/node                       admin@0.1.0
+@types/node          20.19.43  20.19.43   26.1.2  node_modules/@types/node                       api@0.1.0
+@types/node          20.19.43  20.19.43   26.1.2  node_modules/@types/node                       web@0.1.0
+@types/react          19.2.17   19.2.18  19.2.18  apps/admin/node_modules/@types/react           admin@0.1.0
+@types/react          19.2.17   19.2.18  19.2.18  packages/ui/node_modules/@types/react          ui@npm:@zeal/ui@0.0.1
+@types/react          19.2.17   19.2.18  19.2.18  apps/web/node_modules/@types/react             web@0.1.0
+@types/react          18.3.12   18.3.12  19.2.18  node_modules/@types/react                      zeal
+@types/react-dom       19.2.3    19.2.4   19.2.4  apps/admin/node_modules/@types/react-dom       admin@0.1.0
+@types/react-dom       19.2.3    19.2.4   19.2.4  apps/web/node_modules/@types/react-dom         web@0.1.0
+@types/react-dom       18.3.0    18.3.0   19.2.4  node_modules/@types/react-dom                  zeal
+fastify                5.11.0    5.11.2   5.11.2  node_modules/fastify                           api@0.1.0
+lucide-react          0.400.0   0.400.0   1.28.0  apps/web/node_modules/lucide-react             web@0.1.0
+prisma                 5.22.0    5.22.0    7.9.1  packages/database/node_modules/prisma          database@npm:@zeal/database@0.0.1
+react-hook-form        7.83.0    7.83.0   7.84.0  node_modules/react-hook-form                   admin@0.1.0
+react-hook-form        7.83.0    7.83.0   7.84.0  node_modules/react-hook-form                   web@0.1.0
+shadcn                 4.16.0    4.16.0   4.16.1  node_modules/shadcn                            admin@0.1.0
+shadcn                 4.16.0    4.16.0   4.16.1  node_modules/shadcn                            web@0.1.0
+tailwind-merge          2.6.1     2.6.1    3.6.0  packages/ui/node_modules/tailwind-merge        ui@npm:@zeal/ui@0.0.1
+tailwind-merge          2.6.1     2.6.1    3.6.0  apps/web/node_modules/tailwind-merge           web@0.1.0
+tailwindcss            3.4.19    3.4.19    4.3.3  apps/admin/node_modules/tailwindcss            admin@0.1.0
+tailwindcss            3.4.19    3.4.19    4.3.3  apps/web/node_modules/tailwindcss              web@0.1.0
+tsx                    4.23.1    4.23.5   4.23.5  node_modules/tsx                               api@0.1.0
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        admin@0.1.0
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        api@0.1.0
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        database@npm:@zeal/database@0.0.1
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        types@npm:@zeal/types@0.0.1
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        ui@npm:@zeal/ui@0.0.1
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        utils@npm:@zeal/utils@0.0.1
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        web@0.1.0
+typescript              5.9.3     5.9.3    7.0.2  node_modules/typescript                        zeal
+zod                   3.25.76   3.25.76    4.4.3  apps/api/node_modules/zod                      api@0.1.0
+
+═══════════════════════════════════════════════════════════════════════════

@@ -1,5 +1,6 @@
 "use client";
-export const dynamic = 'force-dynamic';
+
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { Sparkles, Filter } from "lucide-react";
 import { BazaarListing } from "@/components/bazaar/BazaarListing";
@@ -18,7 +19,6 @@ export default function BazaarPage() {
   }, [filter]);
 
   const handleBid = (listingId: string) => {
-    // Placeholder for bid modal
     alert(`Bid on listing ${listingId}`);
   };
 

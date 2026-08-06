@@ -1,1 +1,21 @@
-FROM node:20-alpine AS builder\nWORKDIR /app\nCOPY . .\nRUN pnpm install && pnpm build --filter=api\nFROM node:20-alpine\nWORKDIR /app\nCOPY --from=builder /app/apps/api/dist ./dist\nCOPY --from=builder /app/apps/api/package.json ./package.json\nRUN npm install --production\nEXPOSE 3001\nCMD ["node", "dist/main.js"]
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/*/package*.json ./packages/
+
+RUN npm ci --legacy-peer-deps
+
+COPY . .
+RUN npm run build --workspace=api
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/apps/api/package.json ./
+COPY --from=builder /app/apps/api/node_modules ./node_modules
+
+EXPOSE 3001
+CMD ["node", "dist/main.js"]

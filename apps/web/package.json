@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.ts"
+    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.js"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.22",

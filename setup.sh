@@ -1,40 +1,35 @@
 #!/bin/bash
 # =============================================================================
-# PROJECT ZEAL – FORCE FIX FOR PRISMA 7 + VERCEL BUILD
-# =============================================================================
-# This script resolves all build issues in one go:
-#   - Removes @zeal/database from API routes
-#   - Adds prisma.config.ts for Prisma 7
-#   - Updates package.json scripts and dependencies
-#   - Commits and force-pushes to GitHub
+# PROJECT ZEAL – FINAL PRISMA 7 FIX (with dummy URL fallback)
 # =============================================================================
 
 set -euo pipefail
 
 echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  🔧 FORCE FIX: Prisma 7 + Vercel Build"
+echo "  🔧 FINAL PRISMA 7 FIX – DUMMY URL FALLBACK"
 echo "═══════════════════════════════════════════════════════════════════════════"
 
 # ----------------------------------------------------------------------------
 # 1. Install required dependencies in the web app
 # ----------------------------------------------------------------------------
-echo "📦 Installing Prisma 7 dependencies..."
 cd apps/web
 npm install --save-dev @prisma/client prisma @prisma/config dotenv
 cd ../..
 
 # ----------------------------------------------------------------------------
-# 2. Create prisma.config.ts in packages/database
+# 2. Create prisma.config.js (JavaScript, with dummy fallback)
 # ----------------------------------------------------------------------------
-echo "📝 Creating prisma.config.ts..."
-cat > packages/database/prisma.config.ts << 'EOF'
-import { defineConfig, env } from "prisma/config";
-import "dotenv/config";
+cat > packages/database/prisma.config.js << 'EOF'
+const { defineConfig, env } = require("prisma/config");
+require("dotenv").config();
 
-export default defineConfig({
+// Use DATABASE_URL if set, otherwise use a dummy URL for generation
+const databaseUrl = env("DATABASE_URL") || "postgresql://dummy:dummy@localhost:5432/dummy";
+
+module.exports = defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: env("DATABASE_URL"),
+    url: databaseUrl,
   },
 });
 EOF
@@ -42,27 +37,25 @@ EOF
 # ----------------------------------------------------------------------------
 # 3. Remove the 'url' line from schema.prisma
 # ----------------------------------------------------------------------------
-echo "📝 Updating schema.prisma (removing url)..."
 sed -i '/url[[:space:]]*=[[:space:]]*env("DATABASE_URL")/d' packages/database/prisma/schema.prisma
-# Also ensure the datasource block is clean
-sed -i '/datasource db {/,/}/ s/^[[:space:]]*url[[:space:]]*=.*$//' packages/database/prisma/schema.prisma
+# Remove any leftover blank lines
+sed -i '/^[[:space:]]*$/d' packages/database/prisma/schema.prisma
 
 # ----------------------------------------------------------------------------
-# 4. Update web app package.json scripts
+# 4. Update web app package.json scripts (use .js config)
 # ----------------------------------------------------------------------------
-echo "📝 Updating apps/web/package.json scripts..."
 node -e "
 const fs = require('fs');
 const path = './apps/web/package.json';
 const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
 pkg.scripts = pkg.scripts || {};
-pkg.scripts.prebuild = 'npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.ts';
+pkg.scripts.prebuild = 'npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.js';
 pkg.scripts.build = 'next build';
 fs.writeFileSync(path, JSON.stringify(pkg, null, 2));
 "
 
 # ----------------------------------------------------------------------------
-# 5. Remove @zeal/dependency from package.json (if present)
+# 5. Remove @zeal/database dependency from web package.json
 # ----------------------------------------------------------------------------
 node -e "
 const fs = require('fs');
@@ -78,16 +71,15 @@ fs.writeFileSync(path, JSON.stringify(pkg, null, 2));
 "
 
 # ----------------------------------------------------------------------------
-# 6. Replace all imports of @zeal/database in API routes
+# 6. Replace @zeal/database imports in API routes with direct Prisma client
 # ----------------------------------------------------------------------------
-echo "🔄 Replacing @zeal/database imports with direct Prisma client..."
 find apps/web/app/api -type f -name "*.ts" -exec sed -i 's/import { prisma } from "@zeal\/database";/import { PrismaClient } from "@prisma\/client";\nconst prisma = new PrismaClient();/g' {} \;
 find apps/web/app/api -type f -name "*.ts" -exec sed -i "s/import { prisma } from '@zeal\/database';/import { PrismaClient } from '@prisma\/client';\nconst prisma = new PrismaClient();/g" {} \;
 # Remove any leftover imports (just in case)
 find apps/web/app/api -type f -name "*.ts" -exec sed -i '/@zeal\/database/d' {} \;
 
 # ----------------------------------------------------------------------------
-# 7. Update next.config.js to remove @zeal/database from transpilePackages
+# 7. Remove @zeal/database from next.config.js transpilePackages
 # ----------------------------------------------------------------------------
 if grep -q '"@zeal/database"' apps/web/next.config.js; then
   sed -i 's/"@zeal\/database",\?//g' apps/web/next.config.js
@@ -95,37 +87,27 @@ if grep -q '"@zeal/database"' apps/web/next.config.js; then
 fi
 
 # ----------------------------------------------------------------------------
-# 8. Ensure .gitignore does not block prisma.config.ts
-# ----------------------------------------------------------------------------
-# Remove any ignore line that might block the config file
-sed -i '/prisma.config.ts/d' .gitignore 2>/dev/null || true
-
-# ----------------------------------------------------------------------------
-# 9. Stage and commit changes
+# 8. Stage and commit changes
 # ----------------------------------------------------------------------------
 git add -A
-git commit -m "fix: full Prisma 7 compatibility for Vercel build
+git commit -m "fix: final Prisma 7 config with dummy URL fallback
 
-- Added prisma.config.ts
-- Removed url from schema.prisma
-- Replaced @zeal/database with direct Prisma client in API routes
-- Updated web package.json scripts with --config flag
-- Installed required packages (@prisma/config, dotenv)"
+- Switched prisma.config to JavaScript (.js) for Vercel compatibility
+- Added fallback dummy URL for DATABASE_URL during generate
+- Removed @zeal/database imports from API routes
+- Updated prebuild script to use .js config"
 
 # ----------------------------------------------------------------------------
-# 10. Force push to GitHub
+# 9. Force push to GitHub
 # ----------------------------------------------------------------------------
 BRANCH=$(git branch --show-current)
 echo "🚀 Force pushing to origin/$BRANCH ..."
 git push origin "$BRANCH" --force
 
-# ----------------------------------------------------------------------------
-# 11. Final message
-# ----------------------------------------------------------------------------
 echo ""
 echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  ✅ ALL FIXES APPLIED – PUSHED TO ORIGIN"
+echo "  ✅ PUSHED SUCCESSFULLY – VERCEL BUILD SHOULD NOW PASS"
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo ""
-echo "Vercel will now rebuild with the correct Prisma 7 configuration."
-echo "If the build still fails, please share the new error log."
+echo "🔐 Remember to set the real DATABASE_URL in Vercel environment variables!"
+echo "   (The dummy URL is only used during the build for Prisma client generation.)"

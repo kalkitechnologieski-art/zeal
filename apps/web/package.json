@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.22",
@@ -61,11 +62,13 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@prisma/client": "7.9.1",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.0",
     "postcss": "^8.4.0",
+    "prisma": "7.9.1",
     "tailwindcss": "^3.4.0",
     "typescript": "^5.5.0"
   }

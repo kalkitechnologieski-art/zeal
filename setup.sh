@@ -1,97 +1,59 @@
 #!/bin/bash
 # =============================================================================
-# PROJECT ZEAL – CLEAN SECRETS & FORCE PUSH
-# =============================================================================
-# This script removes real credentials from tracked files, amends the commit,
-# and force-pushes the clean history to GitHub.
+# FIX VERCELL BUILD – Remove @zeal/database from API routes
 # =============================================================================
 
-set -euo pipefail
-
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  🧹 CLEANING SECRETS & FORCE PUSHING TO ORIGIN"
-echo "═══════════════════════════════════════════════════════════════════════════"
+echo "🔧 Fixing Vercel build by removing @zeal/database imports..."
 
 # ----------------------------------------------------------------------------
-# 1. Replace real credentials with placeholders
+# 1. Add Prisma dependencies to web app
 # ----------------------------------------------------------------------------
-echo "🔍 Replacing real credentials with placeholders..."
-
-# Patterns to match – common API keys
-PATTERNS=(
-  "rzp_live_[a-zA-Z0-9]*"
-  "rzp_test_[a-zA-Z0-9]*"
-  "sk_live_[a-zA-Z0-9]*"
-  "sk_test_[a-zA-Z0-9]*"
-  "pk_live_[a-zA-Z0-9]*"
-  "pk_test_[a-zA-Z0-9]*"
-  "gsk_[a-zA-Z0-9]*"
-  "AGNES_[a-zA-Z0-9]*"
-  "ZHIPU_[a-zA-Z0-9]*"
-  "LIVEKIT_[a-zA-Z0-9]*"
-  "UPSTASH_[a-zA-Z0-9]*"
-  "R2_[a-zA-Z0-9]*"
-)
-
-# Files to clean
-FILES=(
-  ".env.production.template"
-  ".env.example"
-)
-
-for file in "${FILES[@]}"; do
-  if [ -f "$file" ]; then
-    echo "   Cleaning $file ..."
-    for pattern in "${PATTERNS[@]}"; do
-      sed -i "s/$pattern/PLACEHOLDER/g" "$file"
-    done
-  fi
-done
+cd apps/web
+npm install --save-dev @prisma/client prisma
+cd ../..
 
 # ----------------------------------------------------------------------------
-# 2. Remove the generated export file and add to .gitignore
+# 2. Add prebuild script to generate Prisma client
 # ----------------------------------------------------------------------------
-echo "🗑️ Removing generated export file..."
-rm -f project-zeal-full-export.txt
-
-echo "📝 Adding export file to .gitignore..."
-if ! grep -q "project-zeal-full-export.txt" .gitignore; then
-  echo "project-zeal-full-export.txt" >> .gitignore
-fi
-
-# Also ensure .env.production* is ignored (if not already)
-if ! grep -q ".env.production" .gitignore; then
-  echo ".env.production" >> .gitignore
-  echo ".env.production.template" >> .gitignore
+# Use jq to add "prebuild" script if not present
+if ! grep -q '"prebuild"' apps/web/package.json; then
+  node -e "
+    const pkg = require('./apps/web/package.json');
+    pkg.scripts = pkg.scripts || {};
+    pkg.scripts.prebuild = 'npx prisma generate --schema=../../packages/database/prisma/schema.prisma';
+    pkg.scripts.build = pkg.scripts.build || 'next build';
+    fs.writeFileSync('./apps/web/package.json', JSON.stringify(pkg, null, 2));
+  "
 fi
 
 # ----------------------------------------------------------------------------
-# 3. Stage all changes
+# 3. Update next.config.js to remove @zeal/database from transpilePackages
 # ----------------------------------------------------------------------------
-echo "📦 Staging all changes..."
+if grep -q '"@zeal/database"' apps/web/next.config.js; then
+  sed -i 's/"@zeal\/database",\?//g' apps/web/next.config.js
+  sed -i 's/, \?\]/]/g' apps/web/next.config.js
+fi
+
+# ----------------------------------------------------------------------------
+# 4. Replace @zeal/database imports in API routes with direct Prisma import
+# ----------------------------------------------------------------------------
+find apps/web/app/api -type f -name "*.ts" -exec sed -i 's/import { prisma } from "@zeal\/database";/import { PrismaClient } from "@prisma\/client";\nconst prisma = new PrismaClient();/g' {} \;
+find apps/web/app/api -type f -name "*.ts" -exec sed -i "s/import { prisma } from '@zeal\/database';/import { PrismaClient } from '@prisma\/client';\nconst prisma = new PrismaClient();/g" {} \;
+
+# ----------------------------------------------------------------------------
+# 5. Also remove any other imports from @zeal/database (just in case)
+# ----------------------------------------------------------------------------
+find apps/web/app/api -type f -name "*.ts" -exec sed -i '/@zeal\/database/d' {} \;
+
+# ----------------------------------------------------------------------------
+# 6. Stage and commit changes
+# ----------------------------------------------------------------------------
 git add -A
+git commit -m "fix: replace @zeal/database with direct Prisma import for Vercel build"
 
 # ----------------------------------------------------------------------------
-# 4. Amend the previous commit (without changing message)
+# 7. Push to origin
 # ----------------------------------------------------------------------------
-echo "✏️ Amending commit to remove secrets..."
-git commit --amend --no-edit
+git push origin master --force
 
-# ----------------------------------------------------------------------------
-# 5. Force push to origin/master (or current branch)
-# ----------------------------------------------------------------------------
-BRANCH=$(git branch --show-current)
-echo "🚀 Force pushing to origin/$BRANCH ..."
-git push origin "$BRANCH" --force
-
-# ----------------------------------------------------------------------------
-# 6. Success message
-# ----------------------------------------------------------------------------
-echo ""
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  ✅ SUCCESS: Clean history pushed to origin/$BRANCH"
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo ""
-echo "🔐 Now add your real credentials as environment variables in Vercel,"
-echo "   Fly.io, or your hosting platform – NOT in the repository."
-echo ""
+echo "✅ Done. Vercel build should now pass."

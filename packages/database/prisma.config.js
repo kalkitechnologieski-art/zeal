@@ -1,8 +1,8 @@
-const { defineConfig, env } = require("prisma/config");
-require("dotenv").config();
+const { defineConfig } = require("prisma/config");
 
-// Use DATABASE_URL if set, otherwise use a dummy URL for generation
-const databaseUrl = env("DATABASE_URL") || "postgresql://dummy:dummy@localhost:5432/dummy";
+// ✅ CORRECT: Use process.env with fallback
+// ❌ WRONG: env('DATABASE_URL') – throws error if variable is missing
+const databaseUrl = process.env.DATABASE_URL || "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
 module.exports = defineConfig({
   schema: "prisma/schema.prisma",

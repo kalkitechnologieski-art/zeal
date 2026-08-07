@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma --url=\"postgresql://placeholder:placeholder@localhost:5432/placeholder\"",
+    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma",
     "vercel-build": "npm run prebuild && npm run build"
   },
   "dependencies": {

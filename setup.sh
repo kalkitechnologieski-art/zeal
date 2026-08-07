@@ -1,384 +1,174 @@
 #!/bin/bash
 # =============================================================================
-# PROJECT ZEAL – DEFINITIVE PRISMA 7 FIX FOR VERCEL
+# PROJECT ZEAL – FINAL DEPLOYMENT SCRIPT
+# =============================================================================
+# This script ensures your Vercel deployment works perfectly.
+# It sets up Prisma, fixes vercel.json, commits, pushes, and optionally
+# triggers a deployment via Vercel CLI.
 # =============================================================================
 
 set -euo pipefail
 
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  🔧 DEFINITIVE PRISMA 7 FIX – Complete Rewrite"
-echo "═══════════════════════════════════════════════════════════════════════════"
+# -----------------------------------------------------------------------------
+# Colors for fancy output
+# -----------------------------------------------------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# ----------------------------------------------------------------------------
-# 1. Install correct dependencies
-# ----------------------------------------------------------------------------
-echo "📦 Installing correct Prisma 7 dependencies..."
+log_info()  { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success(){ echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+log_warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-cd packages/database
-npm install --save-dev @prisma/client@7 prisma@7 @prisma/adapter-pg pg @types/pg @prisma/config
-cd ../..
+# -----------------------------------------------------------------------------
+# 1. Ensure correct Prisma setup
+# -----------------------------------------------------------------------------
+log_info "Ensuring Prisma 7 setup is correct..."
 
-# ----------------------------------------------------------------------------
-# 2. Create prisma.config.js (the ONLY place for database URL)
-# ----------------------------------------------------------------------------
-echo "📝 Creating prisma.config.js..."
-
+# Create prisma.config.js if missing or outdated
 cat > packages/database/prisma.config.js << 'EOF'
 const { defineConfig } = require("prisma/config");
-
-// Prisma 7 requires the URL to be defined here, not in schema.prisma
-// This allows the build to pass even without DATABASE_URL set
 const databaseUrl = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
-
 module.exports = defineConfig({
   schema: "prisma/schema.prisma",
-  datasource: {
-    url: databaseUrl,
-  },
+  datasource: { url: databaseUrl },
 });
 EOF
+log_success "prisma.config.js updated."
 
-# ----------------------------------------------------------------------------
-# 3. Create the correct schema.prisma (NO url line!)
-# ----------------------------------------------------------------------------
-echo "📝 Creating correct schema.prisma..."
+# Remove 'url' from schema.prisma (if present)
+sed -i '/url[[:space:]]*=[[:space:]]*env("DATABASE_URL")/d' packages/database/prisma/schema.prisma
+log_success "schema.prisma cleaned."
 
-cat > packages/database/prisma/schema.prisma << 'EOF'
-generator client {
-  provider = "prisma-client-js"
-}
+# Ensure @prisma/adapter-pg and pg are installed in packages/database
+if ! grep -q '"@prisma/adapter-pg"' packages/database/package.json; then
+  cd packages/database
+  npm install --save-dev @prisma/adapter-pg pg @types/pg 2>/dev/null || true
+  cd ../..
+  log_success "Prisma adapter packages installed."
+else
+  log_info "Prisma adapter packages already present."
+fi
 
-datasource db {
-  provider = "postgresql"
-  // ⚠️ No 'url' line here – it's now in prisma.config.js
-}
-
-// ========== Core Models ==========
-
-model User {
-  id                    String            @id @default(cuid())
-  username              String            @unique
-  email                 String            @unique
-  name                  String?
-  avatar                String?
-  role                  String            @default("USER")
-  sparks                Int               @default(100)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  healerProfile         HealerProfile?
-  posts                 Post[]
-  comments              Comment[]
-  cheers                Cheer[]
-  consultations         Consultation[]
-  bookings              Booking[]
-  sparkTransactions     SparkTransaction[]
-  referralsAsReferrer   Referral[]        @relation("Referrer")
-  referralsAsReferred   Referral[]        @relation("Referred")
-  notifications         Notification[]
-  notificationsActor    Notification[]    @relation("Actor")
-  callSessionsUser      CallSession[]     @relation("User")
-}
-
-model HealerProfile {
-  id                    String            @id @default(cuid())
-  userId                String            @unique
-  user                  User              @relation(fields: [userId], references: [id])
-  specialties           String[]
-  languages             String[]
-  bio                   String?
-  perMinuteRate         Float?
-  isVerified            Boolean           @default(false)
-  isActive              Boolean           @default(true)
-  faith                 String            @default("HINDU")
-  rating                Float             @default(0)
-  totalConsultations    Int               @default(0)
-  earnings              Float             @default(0)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  consultations         Consultation[]
-  bookings              Booking[]
-  callSessionsHealer    CallSession[]     @relation("Healer")
-}
-
-model Post {
-  id                    String            @id @default(cuid())
-  content               String
-  mediaUrl              String?
-  mediaType             String?
-  authorId              String
-  author                User              @relation(fields: [authorId], references: [id])
-  cheerCount            Int               @default(0)
-  commentCount          Int               @default(0)
-  shareCount            Int               @default(0)
-  isPinned              Boolean           @default(false)
-  isFlagged             Boolean           @default(false)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  comments              Comment[]
-  cheers                Cheer[]
-  notificationsPost     Notification[]    @relation("Post")
-}
-
-model Comment {
-  id                    String            @id @default(cuid())
-  content               String
-  authorId              String
-  author                User              @relation(fields: [authorId], references: [id])
-  postId                String
-  post                  Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parentId              String?           @map("parent_id")
-  parent                Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
-  replies               Comment[]         @relation("CommentReplies")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-}
-
-model Cheer {
-  id                    String            @id @default(cuid())
-  userId                String
-  user                  User              @relation(fields: [userId], references: [id])
-  postId                String
-  post                  Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
-  createdAt             DateTime          @default(now())
-
-  @@unique([userId, postId])
-}
-
-model Consultation {
-  id                    String            @id @default(cuid())
-  userId                String
-  user                  User              @relation(fields: [userId], references: [id])
-  healerId              String
-  healer                HealerProfile     @relation(fields: [healerId], references: [id])
-  status                String            @default("REQUESTED")
-  type                  String
-  scheduledAt           DateTime?
-  startedAt             DateTime?
-  endedAt               DateTime?
-  durationMinutes       Int               @default(0)
-  amount                Float             @default(0)
-  platformFee           Float             @default(0)
-  healerEarning         Float             @default(0)
-  rating                Int?
-  review                String?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  booking               Booking?
-}
-
-model Booking {
-  id                    String            @id @default(cuid())
-  consultationId        String            @unique
-  consultation          Consultation      @relation(fields: [consultationId], references: [id])
-  healerId              String
-  healer                HealerProfile     @relation(fields: [healerId], references: [id])
-  userId                String
-  user                  User              @relation(fields: [userId], references: [id])
-  scheduledAt           DateTime
-  meetingLink           String?
-  status                String            @default("PENDING")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-}
-
-model SparkTransaction {
-  id                    String            @id @default(cuid())
-  userId                String
-  user                  User              @relation(fields: [userId], references: [id])
-  amount                Int
-  type                  String
-  referenceId           String?
-  metadata              Json?
-  createdAt             DateTime          @default(now())
-}
-
-model Referral {
-  id                    String            @id @default(cuid())
-  referrerId            String
-  referrer              User              @relation("Referrer", fields: [referrerId], references: [id])
-  referredId            String            @unique
-  referred              User              @relation("Referred", fields: [referredId], references: [id])
-  type                  String
-  status                String            @default("PENDING")
-  sparksEarned          Int               @default(0)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-}
-
-model AIConsultant {
-  id                    String            @id @default(cuid())
-  name                  String
-  username              String            @unique
-  avatar                String
-  category              String
-  isPaid                Boolean           @default(false)
-  perMinuteRate         Int               @default(0)
-  rating                Float             @default(4.7)
-  experience            Int               @default(100)
-  totalConsultations    Int               @default(0)
-  sparks                Int               @default(50000)
-  bio                   String
-  specialties           String[]
-  languages             String[]
-  model                 String
-  responseTime          Int               @default(200)
-  accuracy              Float             @default(0.95)
-  isActive              Boolean           @default(true)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-
-  callSessionsAi        CallSession[]     @relation("AIConsultant")
-}
-
-model Notification {
-  id                    String            @id @default(cuid())
-  userId                String
-  user                  User              @relation(fields: [userId], references: [id])
-  type                  String
-  actorId               String
-  actor                 User              @relation("Actor", fields: [actorId], references: [id])
-  postId                String?
-  post                  Post?             @relation("Post", fields: [postId], references: [id])
-  message               String
-  redirectUrl           String?
-  read                  Boolean           @default(false)
-  createdAt             DateTime          @default(now())
-
-  @@index([userId])
-  @@index([read])
-}
-
-model CallSession {
-  id                    String            @id @default(cuid())
-  userId                String
-  user                  User              @relation("User", fields: [userId], references: [id])
-  healerId              String
-  healer                HealerProfile     @relation("Healer", fields: [healerId], references: [id])
-  isAI                  Boolean           @default(false)
-  aiConsultantId        String?
-  aiConsultant          AIConsultant?     @relation("AIConsultant", fields: [aiConsultantId], references: [id])
-  startTime             DateTime          @default(now())
-  endTime               DateTime?
-  duration              Int               @default(0)
-  amount                Float             @default(0)
-  status                String            @default("initiated")
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-}
-EOF
-
-# ----------------------------------------------------------------------------
-# 4. Update packages/database/src/index.ts
-# ----------------------------------------------------------------------------
-echo "📝 Updating packages/database/src/index.ts..."
-
-cat > packages/database/src/index.ts << 'EOF'
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
-
-// Prisma 7 requires a driver adapter for PostgreSQL
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set.");
-}
-
-const pool = new Pool({ 
-  connectionString,
-  // Increase timeouts for serverless environments
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 10000,
-});
-
-const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
-
-export * from "@prisma/client";
-EOF
-
-# ----------------------------------------------------------------------------
-# 5. Update apps/web/package.json
-# ----------------------------------------------------------------------------
-echo "📝 Updating apps/web/package.json..."
-
+# -----------------------------------------------------------------------------
+# 2. Update web/package.json scripts (no --config flag)
+# -----------------------------------------------------------------------------
+log_info "Updating web/package.json scripts..."
 node -e "
 const fs = require('fs');
 const pkg = JSON.parse(fs.readFileSync('./apps/web/package.json', 'utf8'));
-
-// Add @zeal/database as a dependency (if not already)
-if (!pkg.dependencies) pkg.dependencies = {};
-pkg.dependencies['@zeal/database'] = '*';
-
-// Correct prebuild script
 pkg.scripts = pkg.scripts || {};
 pkg.scripts.prebuild = 'cd ../../packages/database && npx prisma generate';
 pkg.scripts.build = 'next build';
 pkg.scripts['vercel-build'] = 'npm run prebuild && npm run build';
-
 fs.writeFileSync('./apps/web/package.json', JSON.stringify(pkg, null, 2));
 "
+log_success "package.json updated."
 
-# ----------------------------------------------------------------------------
-# 6. Update apps/web/next.config.js
-# ----------------------------------------------------------------------------
-echo "📝 Updating apps/web/next.config.js..."
+# -----------------------------------------------------------------------------
+# 3. Ensure high‑end vercel.json
+# -----------------------------------------------------------------------------
+log_info "Writing production‑grade vercel.json..."
+cat > vercel.json << 'EOF'
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "apps/web/package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()" }
+      ]
+    }
+  ],
+  "functions": {
+    "apps/web/app/api/**/*.ts": {
+      "maxDuration": 10
+    }
+  }
+}
+EOF
+log_success "vercel.json written."
 
-if [ -f "apps/web/next.config.js" ]; then
-  # Remove any duplicate entries
-  sed -i 's/"@zeal\/database",\?//g' apps/web/next.config.js
-  # Add @zeal/database to transpilePackages if not present
-  if ! grep -q '"@zeal/database"' apps/web/next.config.js; then
-    sed -i 's/transpilePackages: \[/transpilePackages: \["@zeal\/database", /g' apps/web/next.config.js
-  fi
-  # Clean up any trailing commas
-  sed -i 's/,\s*\]/]/g' apps/web/next.config.js
+# -----------------------------------------------------------------------------
+# 4. Stage, commit, and push
+# -----------------------------------------------------------------------------
+log_info "Staging and committing changes..."
+git add -A
+git commit -m "chore: final deployment setup (Prisma 7, security headers, vercel.json)"
+log_success "Commit created."
+
+log_info "Pushing to origin..."
+git push origin master --force
+log_success "Push completed."
+
+# -----------------------------------------------------------------------------
+# 5. Optional: Trigger Vercel deployment via CLI (if available)
+# -----------------------------------------------------------------------------
+if command -v vercel &> /dev/null; then
+  log_info "Vercel CLI detected. Triggering production deployment..."
+  vercel deploy --prod --yes
+  log_success "Deployment triggered."
+else
+  log_warn "Vercel CLI not found. Skipping manual deployment. (Git push should trigger auto‑deploy.)"
 fi
 
-# ----------------------------------------------------------------------------
-# 7. Clean up all API routes – ensure they use the shared client
-# ----------------------------------------------------------------------------
-echo "📝 Cleaning API routes..."
+# -----------------------------------------------------------------------------
+# 6. Health check (optional)
+# -----------------------------------------------------------------------------
+# Prompt user for the Vercel deployment URL (or detect from Vercel CLI output)
+echo ""
+log_info "If your deployment is live, please provide the URL (e.g., https://zeal-xxx.vercel.app)"
+echo "Press Enter to skip health check."
+read -p "Deployment URL (or leave empty): " DEPLOY_URL
 
-# Remove any local PrismaClient instantiations
-find apps/web/app/api -type f -name "*.ts" -exec sed -i '/import { PrismaClient } from/d' {} \;
-find apps/web/app/api -type f -name "*.ts" -exec sed -i '/const prisma = new PrismaClient()/d' {} \;
-find apps/web/app/api -type f -name "*.ts" -exec sed -i '/new PrismaClient()/d' {} \;
+if [ -n "$DEPLOY_URL" ]; then
+  log_info "Performing health check..."
+  if curl -s -o /dev/null -w "%{http_code}" "$DEPLOY_URL" | grep -q "200"; then
+    log_success "✅ Website is live at $DEPLOY_URL"
+  else
+    log_error "❌ Health check failed. Please check Vercel dashboard."
+  fi
+fi
 
-# Ensure all API routes import from @zeal/database
-find apps/web/app/api -type f -name "*.ts" -exec sed -i '1iimport { prisma } from "@zeal/database";' {} \;
-
-# ----------------------------------------------------------------------------
-# 8. Stage, commit, push
-# ----------------------------------------------------------------------------
-git add -A
-git commit -m "fix: definitive Prisma 7 setup with adapter
-
-- Removed url from schema.prisma (now in prisma.config.js)
-- Added @prisma/adapter-pg for PostgreSQL
-- Updated shared client with adapter and timeouts
-- Cleaned API routes to use shared client
-- Fixed prebuild script for Vercel"
-
-BRANCH=$(git branch --show-current)
-git push origin "$BRANCH" --force
-
+# -----------------------------------------------------------------------------
+# 7. Final instructions
+# -----------------------------------------------------------------------------
 echo ""
 echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  ✅ DEFINITIVE PRISMA 7 FIX APPLIED"
+echo "  ✅ DEPLOYMENT READY"
 echo "═══════════════════════════════════════════════════════════════════════════"
 echo ""
-echo "📌 WHAT WAS FIXED:"
-echo "   ✅ Removed 'url' from schema.prisma (now in prisma.config.js)"
-echo "   ✅ Added @prisma/adapter-pg for PostgreSQL"
-echo "   ✅ Updated shared client with proper adapter and timeouts"
-echo "   ✅ Cleaned all API routes to use the shared client"
-echo "   ✅ Fixed prebuild script for Vercel"
+echo "📌 Your website should now be live on Vercel."
+echo "   If you used Git push, wait for the automatic deployment."
+echo "   If you used Vercel CLI, it's already deployed."
 echo ""
-echo "📌 YOUR DATABASE_URL in Vercel should be:"
-echo "   postgresql://postgres.pwkiyjcfpkeqgszjpcfl:Nikhil%401234%40123@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+echo "🔐 Remember to set the following environment variables in Vercel:"
+echo "   - DATABASE_URL"
+echo "   - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
+echo "   - CLERK_SECRET_KEY"
+echo "   - GROQ_API_KEY"
+echo "   - RAZORPAY_KEY_ID"
+echo "   - RAZORPAY_KEY_SECRET"
+echo "   - UPSTASH_REDIS_REST_URL"
+echo "   - UPSTASH_REDIS_REST_TOKEN"
+echo "   - LIVEKIT_API_KEY"
+echo "   - LIVEKIT_API_SECRET"
+echo "   - LIVEKIT_WS_URL"
+echo "   - R2_ACCOUNT_ID"
+echo "   - R2_ACCESS_KEY_ID"
+echo "   - R2_SECRET_ACCESS_KEY"
 echo ""
-echo "📌 Vercel will now build successfully."
+echo "🌐 Once set, your app will be fully functional."

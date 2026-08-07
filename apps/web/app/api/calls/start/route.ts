@@ -1,5 +1,5 @@
+import { prisma } from "@zeal/database";
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { auth } from '@clerk/nextjs/server';
 
 export async function POST(req: Request) {

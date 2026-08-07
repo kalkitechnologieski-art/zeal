@@ -1,3 +1,4 @@
+import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
 export async function GET() {
   const posts = [

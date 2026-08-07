@@ -1,3 +1,4 @@
+import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
 import { withErrorHandler, AppError } from "@/lib/api-error-handler";
 

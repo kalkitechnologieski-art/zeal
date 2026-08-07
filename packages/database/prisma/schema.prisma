@@ -2,15 +2,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
-
 datasource db {
   provider = "postgresql"
+  // ⚠️ No 'url' line here – it's now in prisma.config.js
 }
+
+// ========== Core Models ==========
 
 model User {
   id                    String            @id @default(cuid())
-  username String @unique
+  username              String            @unique
   email                 String            @unique
   name                  String?
   avatar                String?
@@ -18,7 +19,7 @@ model User {
   sparks                Int               @default(100)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  // Relations
+
   healerProfile         HealerProfile?
   posts                 Post[]
   comments              Comment[]
@@ -32,6 +33,7 @@ model User {
   notificationsActor    Notification[]    @relation("Actor")
   callSessionsUser      CallSession[]     @relation("User")
 }
+
 model HealerProfile {
   id                    String            @id @default(cuid())
   userId                String            @unique
@@ -48,11 +50,12 @@ model HealerProfile {
   earnings              Float             @default(0)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  // Relations
+
   consultations         Consultation[]
   bookings              Booking[]
   callSessionsHealer    CallSession[]     @relation("Healer")
 }
+
 model Post {
   id                    String            @id @default(cuid())
   content               String
@@ -67,11 +70,12 @@ model Post {
   isFlagged             Boolean           @default(false)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  // Relations
+
   comments              Comment[]
   cheers                Cheer[]
   notificationsPost     Notification[]    @relation("Post")
 }
+
 model Comment {
   id                    String            @id @default(cuid())
   content               String
@@ -85,6 +89,7 @@ model Comment {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
+
 model Cheer {
   id                    String            @id @default(cuid())
   userId                String
@@ -92,8 +97,10 @@ model Cheer {
   postId                String
   post                  Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt             DateTime          @default(now())
+
   @@unique([userId, postId])
 }
+
 model Consultation {
   id                    String            @id @default(cuid())
   userId                String
@@ -113,9 +120,10 @@ model Consultation {
   review                String?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  // Relations
+
   booking               Booking?
 }
+
 model Booking {
   id                    String            @id @default(cuid())
   consultationId        String            @unique
@@ -130,6 +138,7 @@ model Booking {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
+
 model SparkTransaction {
   id                    String            @id @default(cuid())
   userId                String
@@ -140,6 +149,7 @@ model SparkTransaction {
   metadata              Json?
   createdAt             DateTime          @default(now())
 }
+
 model Referral {
   id                    String            @id @default(cuid())
   referrerId            String
@@ -152,6 +162,7 @@ model Referral {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 }
+
 model AIConsultant {
   id                    String            @id @default(cuid())
   name                  String
@@ -167,15 +178,16 @@ model AIConsultant {
   bio                   String
   specialties           String[]
   languages             String[]
-  model                 String            // "zhipu" | "agnes" | "roxy"
+  model                 String
   responseTime          Int               @default(200)
   accuracy              Float             @default(0.95)
   isActive              Boolean           @default(true)
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  // Relations
+
   callSessionsAi        CallSession[]     @relation("AIConsultant")
 }
+
 model Notification {
   id                    String            @id @default(cuid())
   userId                String
@@ -189,9 +201,11 @@ model Notification {
   redirectUrl           String?
   read                  Boolean           @default(false)
   createdAt             DateTime          @default(now())
+
   @@index([userId])
   @@index([read])
 }
+
 model CallSession {
   id                    String            @id @default(cuid())
   userId                String

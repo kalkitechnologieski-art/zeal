@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@zeal/database", '@zeal/ui', '@zeal/types', '@zeal/utils'],
+  transpilePackages: ["@zeal/database",  '@zeal/ui', '@zeal/types', '@zeal/utils'],
   experimental: {
     serverActions: {
       enabled: true,

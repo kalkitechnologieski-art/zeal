@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "prebuild": "npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.js",
+    "prebuild": "cd ../../packages/database && npx prisma generate --schema=./prisma/schema.prisma --config=./prisma.config.js && cd ../../apps/web && npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.js",
     "vercel-build": "npm run prebuild && npm run build"
   },
   "dependencies": {
@@ -68,6 +68,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@zeal/database": "0.0.1",
     "autoprefixer": "^10.4.0",
     "dotenv": "17.4.2",
     "postcss": "^8.4.0",

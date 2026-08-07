@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "prebuild": "cd ../../packages/database && npx prisma generate --schema=./prisma/schema.prisma --config=./prisma.config.js && cd ../../apps/web && npx prisma generate --schema=../../packages/database/prisma/schema.prisma --config=../../packages/database/prisma.config.js",
+    "prebuild": "cd ../../packages/database && npx prisma generate --schema=./prisma/schema.prisma --config=./prisma.config.js",
     "vercel-build": "npm run prebuild && npm run build"
   },
   "dependencies": {

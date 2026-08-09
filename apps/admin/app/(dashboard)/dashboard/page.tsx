@@ -1,85 +1,73 @@
-"use client";
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { useAdminStore } from '@/lib/store/adminStore';
+import { Users, UserCog, Calendar, DollarSign, Phone } from 'lucide-react';
+import { LoadingState } from '@/components/shared/LoadingState';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
+import { EmptyState } from '@/components/shared/EmptyState';
 
-import * as React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@zeal/ui";
-import { TrendingUp, Users, CalendarCheck, DollarSign, ArrowUpRight, ArrowDownRight, Phone } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+function DashboardContent() {
+  const { profile } = useAdminStore();
+  const isSuper = profile?.role === 'super_admin';
 
-const stats = [
-  { label: "Total Revenue", value: "₹ 12,450", change: "+12.5%", icon: DollarSign, positive: true },
-  { label: "Bookings", value: "156", change: "+8.2%", icon: CalendarCheck, positive: true },
-  { label: "Active Users", value: "1,234", change: "+3.1%", icon: Users, positive: true },
-  { label: "Conversion Rate", value: "24.8%", change: "-2.1%", icon: TrendingUp, positive: false },
-];
+  const { data: stats, isLoading, error } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/stats');
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      return res.json();
+    },
+    refetchInterval: 30000,
+    enabled: isSuper,
+  });
 
-const chartData = [
-  { name: "Mon", revenue: 4000 },
-  { name: "Tue", revenue: 3000 },
-  { name: "Wed", revenue: 5000 },
-  { name: "Thu", revenue: 2780 },
-  { name: "Fri", revenue: 1890 },
-  { name: "Sat", revenue: 2390 },
-  { name: "Sun", revenue: 3490 },
-];
+  if (isLoading) return <LoadingState />;
+  if (error) {
+    return (
+      <div className="glass-card-3d p-6 text-center text-red-500">
+        <p>Failed to load dashboard: {(error as Error).message}</p>
+        <button onClick={() => window.location.reload()} className="mt-2 text-[#9D7DC5] hover:underline">
+          Retry
+        </button>
+      </div>
+    );
+  }
+  if (!isSuper) {
+    return <EmptyState icon={Users} title="Access Restricted" description="You don't have permission to view this dashboard." />;
+  }
 
-export default function AdminDashboard() {
-  const { user } = useUser();
+  const statsData = stats || { users: 0, consultants: 0, bookings: 0, revenueToday: 0 };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="border-[#E1C5E7] dark:border-gray-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#B8A1D9] dark:text-gray-400">{stat.label}</p>
-                  <p className="text-2xl font-bold text-[#5E4B8B] dark:text-white">{stat.value}</p>
-                </div>
-                <div className="p-3 rounded-full bg-[#F4E8F7] dark:bg-gray-800">
-                  <stat.icon className="w-5 h-5 text-[#9D7DC5]" />
-                </div>
-              </div>
-              <div className="flex items-center gap-1 mt-2">
-                {stat.positive ? (
-                  <ArrowUpRight className="w-4 h-4 text-green-500" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4 text-red-500" />
-                )}
-                <span className={`text-sm font-medium ${stat.positive ? "text-green-500" : "text-red-500"}`}>
-                  {stat.change}
-                </span>
-                <span className="text-sm text-[#B8A1D9] dark:text-gray-400">vs last week</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <StatsCard label="Users" value={statsData.users} icon={Users} color="purple" />
+        <StatsCard label="Consultants" value={statsData.consultants} icon={UserCog} color="blue" />
+        <StatsCard label="Bookings" value={statsData.bookings} icon={Calendar} color="green" />
+        <StatsCard label="Revenue" value={`₹${statsData.revenueToday}`} icon={DollarSign} color="gold" />
       </div>
-      <Card className="border-[#E1C5E7] dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-[#5E4B8B] dark:text-white">Revenue Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E1C5E7" />
-                <XAxis dataKey="name" stroke="#B8A1D9" />
-                <YAxis stroke="#B8A1D9" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#FFFFFF",
-                    borderColor: "#E1C5E7",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Line type="monotone" dataKey="revenue" stroke="#9D7DC5" strokeWidth={2} dot={{ fill: "#9D7DC5" }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <RevenueChart />
+        </div>
+        <div className="lg:col-span-1">
+          <RecentActivity />
+        </div>
+      </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+      <ErrorBoundary>
+        <DashboardContent />
+      </ErrorBoundary>
+    </motion.div>
   );
 }

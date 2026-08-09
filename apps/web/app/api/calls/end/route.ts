@@ -1,46 +1,22 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { prisma } from '@zeal/database';
+import { CallBilling } from '@/lib/calls/billing';
+import { withErrorHandler, AppError } from '@/lib/errors';
 
-export async function POST(req: Request) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
 
-    const { consultantId, isAI, duration } = await req.json();
+  const { sessionId } = await req.json();
+  if (!sessionId) throw new AppError('Session ID required', 400, 'MISSING_SESSION_ID');
 
-    // Find the active call session
-    const session = await prisma.callSession.findFirst({
-      where: {
-        userId,
-        status: 'initiated',
-        isAI: isAI || false,
-        ...(isAI ? { aiConsultantId: consultantId } : { healerId: consultantId }),
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  const session = await prisma.callSession.findUnique({
+    where: { id: sessionId },
+  });
+  if (!session) throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
 
-    if (session) {
-      const amount = isAI && session.isAI ? (duration / 60) * 2 : 0; // ₹2/min for AI calls
-      await prisma.callSession.update({
-        where: { id: session.id },
-        data: {
-          endTime: new Date(),
-          duration,
-          amount,
-          status: 'ended',
-        },
-      });
-    }
+  const ended = await CallBilling.endSession(sessionId);
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Call end error:', error);
-    return NextResponse.json(
-      { error: 'Failed to end call' },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({ session: ended });
+});

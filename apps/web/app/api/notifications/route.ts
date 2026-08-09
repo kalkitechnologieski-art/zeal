@@ -1,55 +1,16 @@
-import { prisma } from "@zeal/database";
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { NotificationService } from '@/lib/notifications/service';
+import { withErrorHandler, AppError } from '@/lib/errors';
 
-export async function GET() {
+export const GET = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId },
-    include: {
-      actor: {
-        select: { id: true, username: true, avatar: true },
-      },
-      post: {
-        select: { id: true, content: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const url = new URL(req.url);
+  const limit = parseInt(url.searchParams.get('limit') || '50');
+  const offset = parseInt(url.searchParams.get('offset') || '0');
 
-  return NextResponse.json(notifications);
-}
-
-export async function PATCH(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await req.json();
-  await prisma.notification.update({
-    where: { id },
-    data: { read: true },
-  });
-
-  return NextResponse.json({ success: true });
-}
-
-export async function PUT(req: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  await prisma.notification.updateMany({
-    where: { userId, read: false },
-    data: { read: true },
-  });
-
-  return NextResponse.json({ success: true });
-}
+  const result = await NotificationService.getNotifications(userId, { limit, offset });
+  return NextResponse.json(result);
+});

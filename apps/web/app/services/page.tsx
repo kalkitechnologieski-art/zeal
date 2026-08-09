@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import * as React from "react";
 import Link from "next/link";
@@ -9,12 +9,12 @@ import { ConsultantCard } from "@/components/shared/ConsultantCard";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@zeal/ui";
 
 const allServices = [
-  { id: "horoscope", name: "Daily Horoscope", icon: "🌟", description: "AI-powered daily predictions", isFree: true, route: "/horoscope", isAIPowered: true },
-  { id: "tarot", name: "Tarot Reading", icon: "🔮", description: "3-card spread with AI", isFree: true, route: "/tarot", isAIPowered: true },
-  { id: "kundali", name: "Kundali", icon: "🪐", description: "Instant birth chart", isFree: true, route: "/kundali", isAIPowered: true },
+  { id: "horoscope", name: "Daily Horoscope", icon: "🌙", description: "AI-powered daily predictions", isFree: true, route: "/services/horoscope", isAIPowered: true },
+  { id: "tarot", name: "Tarot Reading", icon: "🔮", description: "3-card spread with AI", isFree: true, route: "/services/tarot", isAIPowered: true },
+  { id: "kundali", name: "Kundali", icon: "🪐", description: "Instant birth chart", isFree: true, route: "/services/kundali", isAIPowered: true },
   { id: "matchmaking", name: "Match Making", icon: "💕", description: "AI compatibility check", isFree: true, route: "/matchmaking", isAIPowered: true },
-  { id: "palmistry", name: "Palmistry", icon: "🖐️", description: "AI palm reading", isFree: true, route: "/palmistry", isAIPowered: true },
-  { id: "numerology", name: "Numerology", icon: "🔢", description: "Life path analysis", isFree: true, route: "/numerology", isAIPowered: true },
+  { id: "palmistry", name: "Palmistry", icon: "🖐️", description: "AI palm reading", isFree: true, route: "/services/palmistry", isAIPowered: true },
+  { id: "numerology", name: "Numerology", icon: "🔢", description: "Life path analysis", isFree: true, route: "/services/numerology", isAIPowered: true },
   { id: "consultation", name: "Live Consultation", icon: "💬", description: "Talk to a real expert", isFree: false, route: "/explore", tags: ["Human"] },
   { id: "video-call", name: "Video Call", icon: "📹", description: "Face-to-face with healer", isFree: false, route: "/explore", tags: ["Human"] },
 ];
@@ -43,12 +43,15 @@ const mockConsultants: Record<ConsultantCategory, ConsultantProfile[]> = {
   ],
   [ConsultantCategory.PSYCHOLOGIST]: [],
   [ConsultantCategory.TAROT]: [],
-  [ConsultantCategory.HEALER]: [],
-  [ConsultantCategory.LIFE_COACH]: [],
   [ConsultantCategory.NUMEROLOGIST]: [],
   [ConsultantCategory.PALMIST]: [],
   [ConsultantCategory.VASTU]: [],
   [ConsultantCategory.REIKI]: [],
+  [ConsultantCategory.LIFE_COACH]: [],
+  [ConsultantCategory.HEALER]: [],
+  [ConsultantCategory.MOTIVATIONAL_SPEAKER]: [],
+  [ConsultantCategory.SPIRITUAL_GUIDE]: [],
+  [ConsultantCategory.YOGA_INSTRUCTOR]: [],
 };
 
 export default function ServicesPage() {

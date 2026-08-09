@@ -1,21 +1,26 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
+import { PrismaClient } from '@prisma/client';
+import { PrismaNeon } from '@prisma/adapter-neon';
 
-// Prisma 7 requires a driver adapter for PostgreSQL
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set.");
+let prismaInstance: PrismaClient | null = null;
+
+function getPrismaClient() {
+  if (!prismaInstance) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    const adapter = new PrismaNeon({ connectionString });
+    prismaInstance = new PrismaClient({ adapter });
+  }
+  return prismaInstance;
 }
 
-const pool = new Pool({ 
-  connectionString,
-  // Increase timeouts for serverless environments
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 10000,
+// Create a proxy that lazily initializes the client on first property access
+export const prisma = new Proxy({} as PrismaClient, {
+  get: (target, prop) => {
+    const client = getPrismaClient();
+    return Reflect.get(client, prop);
+  },
 });
 
-const adapter = new PrismaPg(pool);
-export const prisma = new PrismaClient({ adapter });
-
-export * from "@prisma/client";
+export * from '@prisma/client';

@@ -1,35 +1,37 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { prisma } from '@zeal/database';
+import { generateToken } from '@/lib/livekit/room';
+import { CallBilling } from '@/lib/calls/billing';
+import { withErrorHandler, AppError } from '@/lib/errors';
 
-export async function POST(req: Request) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
 
-    const { consultantId, isAI, isPaid } = await req.json();
+  const { bookingId } = await req.json();
+  if (!bookingId) throw new AppError('Booking ID required', 400, 'MISSING_BOOKING_ID');
 
-    const session = await prisma.callSession.create({
-      data: {
-        userId,
-        healerId: consultantId,
-        isAI: isAI || false,
-        aiConsultantId: isAI ? consultantId : undefined,
-        status: 'initiated',
-      },
-    });
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { consultant: true },
+  });
+  if (!booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
 
-    // Notify the consultant (via WebSocket)
-    // In production: publish to Redis
+  const session = await prisma.callSession.create({
+    data: {
+      bookingId: booking.id,
+      userId: userId,
+      consultantId: booking.consultantId,
+      startTime: new Date(),
+      status: 'INITIATED',
+    },
+  });
 
-    return NextResponse.json({ sessionId: session.id });
-  } catch (error) {
-    console.error('Call start error:', error);
-    return NextResponse.json(
-      { error: 'Failed to start call' },
-      { status: 500 }
-    );
-  }
-}
+  const roomName = `booking-${bookingId}`;
+  const token = await generateToken(roomName, userId);
+
+  CallBilling.startBilling(session.id, booking.consultant.perMinuteRate);
+
+  return NextResponse.json({ sessionId: session.id, token });
+});

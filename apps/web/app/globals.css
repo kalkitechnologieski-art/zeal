@@ -23,7 +23,13 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
-    --radius: 0.75rem;
+    --radius: 1rem;
+    --zeal-purple: #9D7DC5;
+    --zeal-purple-dark: #533AFD;
+    --zeal-purple-light: #E1C5E7;
+    --zeal-text: #5E4B8B;
+    --zeal-text-muted: #B8A1D9;
+    --zeal-spark: #FFD700;
   }
 
   .dark {
@@ -55,167 +61,339 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    height: 100%;
-    overflow-y: scroll;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
   }
 }
 
-/* ========== PREMIUM SCROLLING ========== */
+/* ==========================================================================
+   ANIMATED PURPLE GRADIENT FOR BARS – Safe syntax with fallback
+   ========================================================================== */
 
-/* Ensure scrolling works properly */
-html {
-  height: 100%;
-  overflow-y: scroll;
-  scroll-behavior: smooth;
+/* Keyframe animation – 6 distinct shades of purple */
+@keyframes purpleWave {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 0%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 100%; }
+  100% { background-position: 0% 50%; }
 }
 
-body {
-  min-height: 100vh;
-  min-height: 100dvh; /* dynamic viewport height for mobile */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+/* Light mode – vibrant purple wave */
+.bar-purple {
+  background: linear-gradient(135deg, #9D7DC5, #B8A1D9, #7A5A9E, #9D7DC5);
+  background-size: 300% 300%;
+  animation: purpleWave 12s ease-in-out infinite;
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Main content area – allows scroll and has extra bottom padding */
-main {
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-bottom: 3.5rem; /* 3.5cm extra bottom padding */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+/* Dark mode – deeper, richer purple wave */
+.dark .bar-purple {
+  background: linear-gradient(135deg, #2D1B3D, #3D2A5A, #1A0F26, #533AFD);
+  background-size: 300% 300%;
+  animation: purpleWave 12s ease-in-out infinite;
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* For mobile devices, add more bottom padding to avoid nav overlap */
-@media (max-width: 768px) {
-  main {
-    padding-bottom: 5rem;
-  }
+/* Bottom nav variant – no bottom border */
+.bar-purple-bottom {
+  background: linear-gradient(135deg, #9D7DC5, #B8A1D9, #7A5A9E, #9D7DC5);
+  background-size: 300% 300%;
+  animation: purpleWave 12s ease-in-out infinite;
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-/* Ensure content can grow beyond viewport */
-#__next {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  min-height: 100dvh;
+.dark .bar-purple-bottom {
+  background: linear-gradient(135deg, #2D1B3D, #3D2A5A, #1A0F26, #533AFD);
+  background-size: 300% 300%;
+  animation: purpleWave 12s ease-in-out infinite;
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* ========== PREMIUM SCROLLBAR ========== */
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  @apply bg-[#F4E8F7] dark:bg-gray-800;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-[#9D7DC5] rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-[#533AFD];
-}
-
-/* ========== PREMIUM BUTTONS & LINKS ========== */
-
-/* Premium "See All" link */
-.see-all-link {
-  @apply text-sm font-medium text-[#9D7DC5] dark:text-[#9D7DC5] relative inline-flex items-center gap-1;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.see-all-link::after {
-  content: '';
-  @apply absolute bottom-0 left-0 w-0 h-[2px] bg-[#9D7DC5] dark:bg-[#9D7DC5] transition-all duration-300;
-}
-
-.see-all-link:hover {
-  @apply text-[#533AFD] dark:text-[#533AFD] gap-2;
-}
-
-.see-all-link:hover::after {
-  width: 100%;
-}
-
-.see-all-link .arrow {
-  @apply transition-transform duration-300;
-}
-
-.see-all-link:hover .arrow {
-  @apply translate-x-1;
-}
-
-/* Premium CTA Button */
-.cta-button {
-  @apply relative px-6 py-3 rounded-xl font-semibold text-white overflow-hidden transition-all duration-300;
-  background: linear-gradient(135deg, #9D7DC5, #533AFD);
-  box-shadow: 0 4px 15px rgba(83, 58, 253, 0.35);
-}
-
-.cta-button::before {
-  content: '';
-  @apply absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300;
-}
-
-.cta-button:hover {
-  @apply scale-[1.02] shadow-xl;
-  box-shadow: 0 6px 25px rgba(83, 58, 253, 0.5);
-}
-
-.cta-button:hover::before {
-  @apply opacity-100;
-}
-
-.cta-button:active {
-  @apply scale-[0.98];
-}
-
-/* Premium Secondary Button */
-.btn-secondary {
-  @apply relative px-6 py-3 rounded-xl font-semibold text-[#5E4B8B] dark:text-white bg-[#F4E8F7] dark:bg-gray-800 border border-[#E1C5E7] dark:border-gray-700;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-secondary:hover {
-  @apply border-[#9D7DC5] dark:border-[#9D7DC5] shadow-md scale-[1.02] bg-white dark:bg-gray-700;
-}
-
-.btn-secondary:active {
-  @apply scale-[0.98];
-}
-
-/* ========== SAFE AREA ========== */
-
-.safe-area-padding-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
-}
-
-/* ========== RESPONSIVE UTILITIES ========== */
-
-/* Hide scrollbar for horizontal scrolling elements */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* ========== PREMIUM CARDS ========== */
-
-.card-hover {
-  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
-}
-
-/* ========== GLASSMORPHISM ========== */
-
+/* ==========================================================================
+   GLASSMORPHISM
+   ========================================================================== */
 .glass {
-  @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
 }
 
-/* ========== GRADIENT TEXT ========== */
+.dark .glass {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.06);
+}
 
-.gradient-text {
-  @apply bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] bg-clip-text text-transparent;
+.glass-card-3d {
+  background: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.10) inset;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dark .glass-card-3d {
+  background: rgba(0, 0, 0, 0.30);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.20);
+}
+
+.glass-card-3d:hover {
+  box-shadow: 0 12px 48px rgba(83, 58, 253, 0.08);
+  transform: translateY(-4px);
+}
+
+/* ==========================================================================
+   LUXURY BUTTONS
+   ========================================================================== */
+.btn-luxury {
+  @apply relative overflow-hidden px-6 py-3.5 rounded-xl font-medium text-white transition-all duration-300;
+  background: linear-gradient(135deg, #9D7DC5, #533AFD);
+  box-shadow: 0 4px 20px rgba(83, 58, 253, 0.25);
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.btn-luxury:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(83, 58, 253, 0.35);
+}
+
+.btn-luxury:active {
+  transform: scale(0.96);
+}
+
+/* ==========================================================================
+   CENTER BUTTON – 3D lift
+   ========================================================================== */
+.btn-center {
+  @apply relative flex items-center justify-center rounded-full transition-all duration-300;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(145deg, #9D7DC5, #533AFD);
+  box-shadow: 0 4px 0 0 #3D2A5A, 0 8px 24px rgba(83, 58, 253, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.20);
+  transform: translateY(-10px) scale(1);
+}
+
+.btn-center:hover {
+  transform: translateY(-16px) scale(1.04);
+  box-shadow: 0 6px 0 0 #3D2A5A, 0 12px 32px rgba(83, 58, 253, 0.45);
+}
+
+.btn-center:active {
+  transform: translateY(-4px) scale(0.96);
+  box-shadow: 0 2px 0 0 #3D2A5A, 0 4px 16px rgba(83, 58, 253, 0.25);
+}
+
+/* ==========================================================================
+   WALLET BADGE
+   ========================================================================== */
+.wallet-badge {
+  @apply flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all duration-300;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  color: #fff;
+  min-height: 40px;
+}
+
+.wallet-badge:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.02);
+}
+
+.dark .wallet-badge {
+  background: rgba(0, 0, 0, 0.30);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: #E1C5E7;
+}
+
+/* ==========================================================================
+   SCROLL REVEALS
+   ========================================================================== */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scroll-reveal-stagger.in-view > *:nth-child(1) { transition-delay: 0.04s; opacity: 1; transform: translateY(0); }
+.scroll-reveal-stagger.in-view > *:nth-child(2) { transition-delay: 0.08s; opacity: 1; transform: translateY(0); }
+.scroll-reveal-stagger.in-view > *:nth-child(3) { transition-delay: 0.12s; opacity: 1; transform: translateY(0); }
+.scroll-reveal-stagger.in-view > *:nth-child(4) { transition-delay: 0.16s; opacity: 1; transform: translateY(0); }
+.scroll-reveal-stagger.in-view > *:nth-child(5) { transition-delay: 0.20s; opacity: 1; transform: translateY(0); }
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 640px) {
+  .btn-center {
+    width: 56px;
+    height: 56px;
+    transform: translateY(-6px);
+  }
+  .btn-center:hover {
+    transform: translateY(-10px) scale(1.02);
+  }
+  .glass-card-3d {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+  }
+  .btn-luxury {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+  }
+  .wallet-badge {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .glass-card-3d {
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+  }
+}
+
+/* ==========================================================================
+   PREMIUM BOTTOM NAV – Enhanced glass + 3D center
+   ========================================================================== */
+.bar-purple-bottom {
+  background: linear-gradient(180deg, rgba(157,125,197,0.12), rgba(83,58,253,0.08));
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dark .bar-purple-bottom {
+  background: linear-gradient(180deg, rgba(61,42,90,0.20), rgba(26,15,38,0.15));
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Safe area for notched phones */
+.safe-area-padding-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+}
+
+/* Soft press effect */
+.soft-press:active {
+  transform: scale(0.95);
+  transition-duration: 0.08s;
+}
+
+/* ==========================================================================
+   MOBILE-FIRST RESPONSIVE ADJUSTMENTS
+   ========================================================================== */
+@media (max-width: 480px) {
+  .glass-card-3d {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+  }
+  .btn-luxury {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    min-height: 40px;
+  }
+  .wallet-badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.65rem;
+    min-height: 32px;
+  }
+  .scroll-reveal {
+    transform: translateY(16px);
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .glass-card-3d {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+}
+
+/* Ensure bottom nav is above everything */
+.z-50 {
+  z-index: 50;
+}
+
+/* ==========================================================================
+   ANIMATED PURPLE GRADIENT BOTTOM NAV – Enhanced visibility
+   ========================================================================== */
+@keyframes purpleWaveBottom {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 50% 0%; }
+  50% { background-position: 100% 50%; }
+  75% { background-position: 50% 100%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bar-purple-bottom {
+  background: linear-gradient(135deg, #9D7DC5, #B8A1D9, #7A5A9E, #9D7DC5);
+  background-size: 300% 300%;
+  animation: purpleWaveBottom 10s ease-in-out infinite;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.dark .bar-purple-bottom {
+  background: linear-gradient(135deg, #2D1B3D, #3D2A5A, #1A0F26, #533AFD);
+  background-size: 300% 300%;
+  animation: purpleWaveBottom 10s ease-in-out infinite;
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ==========================================================================
+   PREMIUM 3D BUTTON STYLES – Additional safety
+   ========================================================================== */
+.btn-center-3d {
+  @apply relative flex items-center justify-center rounded-full transition-all duration-150;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(145deg, #9D7DC5, #533AFD);
+  box-shadow: 0 6px 0 0 #3D2A5A, 0 12px 32px rgba(83, 58, 253, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.20);
+  transform: translateY(-6px);
+}
+
+.btn-center-3d:hover {
+  transform: translateY(-12px) scale(1.04);
+  box-shadow: 0 8px 0 0 #3D2A5A, 0 20px 40px rgba(83, 58, 253, 0.5);
+}
+
+.btn-center-3d:active {
+  transform: translateY(-2px) scale(0.96);
+  box-shadow: 0 2px 0 0 #3D2A5A, 0 8px 20px rgba(83, 58, 253, 0.25);
 }

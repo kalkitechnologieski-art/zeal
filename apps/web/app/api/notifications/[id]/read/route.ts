@@ -1,33 +1,16 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { NotificationService } from '@/lib/notifications/service';
+import { withErrorHandler, AppError } from '@/lib/errors';
 
-export async function POST(
+export const POST = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  const { id } = await params;
 
-    const { id } = await params;
-
-    await prisma.notification.updateMany({
-      where: {
-        id,
-        userId,
-      },
-      data: { read: true },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Notification read error:', error);
-    return NextResponse.json(
-      { error: 'Failed to mark notification as read' },
-      { status: 500 }
-    );
-  }
-}
+  await NotificationService.markAsRead(id, userId);
+  return NextResponse.json({ success: true });
+});

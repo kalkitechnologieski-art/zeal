@@ -1,0 +1,54 @@
+export enum Role {
+  USER = 'USER',
+  HEALER = 'HEALER',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+}
+
+export enum ConsultantCategory {
+  ASTROLOGER = 'ASTROLOGER',
+  PSYCHOLOGIST = 'PSYCHOLOGIST',
+  TAROT = 'TAROT',
+  NUMEROLOGIST = 'NUMEROLOGIST',
+  PALMIST = 'PALMIST',
+  VASTU = 'VASTU',
+  REIKI = 'REIKI',
+  LIFE_COACH = 'LIFE_COACH',
+  HEALER = 'HEALER',
+}
+
+export enum Faith {
+  HINDU = 'HINDU',
+  ISLAM = 'ISLAM',
+  CHRISTIAN = 'CHRISTIAN',
+  BUDDHIST = 'BUDDHIST',
+  JEWISH = 'JEWISH',
+  SIKH = 'SIKH',
+  OTHER = 'OTHER',
+}
+
+export enum BookingStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  MISSED = 'MISSED',
+  DISPUTED = 'DISPUTED',
+}
+
+export enum CallStatus {
+  INITIATED = 'INITIATED',
+  CONNECTED = 'CONNECTED',
+  ENDED = 'ENDED',
+  RECORDING_READY = 'RECORDING_READY',
+}
+
+export enum TransactionType {
+  TOPUP = 'TOPUP',
+  PAYMENT = 'PAYMENT',
+  REFUND = 'REFUND',
+  PAYOUT = 'PAYOUT',
+  FEE = 'FEE',
+  COMMISSION = 'COMMISSION',
+}

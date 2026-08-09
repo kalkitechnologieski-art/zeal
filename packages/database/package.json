@@ -18,5 +18,8 @@
     "studio": "prisma studio",
     "type-check": "tsc --noEmit",
     "prisma:generate": "npx prisma generate --schema=./prisma/schema.prisma --config=./prisma.config.js"
+  },
+  "dependencies": {
+    "@prisma/adapter-neon": "^7.9.1"
   }
 }

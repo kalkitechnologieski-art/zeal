@@ -1,46 +1,42 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { generateMeetingLink } from '@/lib/livekit/room';
-import { NotificationService } from '@/lib/notifications/service';
-import { withErrorHandler, AppError } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { generateMeetingLink } from "@/lib/livekit/room";
+import { NotificationService } from "@/lib/notifications/service";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const POST = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   const { id } = await params;
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || (user.role !== 'HEALER' && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
-    throw new AppError('Forbidden', 403, 'FORBIDDEN');
-  }
 
   const booking = await prisma.booking.findUnique({
     where: { id },
-    include: {
-      consultant: {
-        include: { user: true }, // 👈 include user to access name
-      },
-    },
+    include: { consultant: { include: { user: true } } },
   });
-  if (!booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
+  if (!booking) throw new AppError("Booking not found", HTTP_STATUS.NOT_FOUND);
 
-  if (user.role === 'HEALER' && booking.consultant.userId !== userId) {
-    throw new AppError('Not your booking', 403, 'FORBIDDEN');
+  // Only the consultant or the user can confirm (user confirms automatically on creation, but we allow consultant to confirm too)
+  if (booking.consultant.userId !== userId && booking.userId !== userId) {
+    throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
   }
 
-  const meetingLink = await generateMeetingLink(booking.id);
+  if (booking.status === "CONFIRMED") return NextResponse.json({ booking });
+
+  const meetingLink = await generateMeetingLink(id);
   const updated = await prisma.booking.update({
     where: { id },
-    data: { status: 'CONFIRMED', meetingLink },
+    data: { status: "CONFIRMED", meetingLink },
+    include: { consultant: { include: { user: true } }, user: true },
   });
 
+  // Notify the user
   await NotificationService.createNotification({
     userId: booking.userId!,
-    type: 'booking_confirmed',
+    type: "booking",
     message: `Your booking with ${booking.consultant.user.name} is confirmed!`,
     redirectUrl: `/booking/${booking.id}`,
     actorId: userId,

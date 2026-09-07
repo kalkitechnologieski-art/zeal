@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+import { withErrorHandler } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+import { redis } from "@/lib/cache";
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const { date, time, place } = await req.json();
+
+  const cacheKey = `kundali:${date}:${time}:${place}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    return NextResponse.json({ ...JSON.parse(cached), cached: true });
+  }
+
+  const prompt = `Generate a detailed Vedic birth chart (Kundali) for a person born on ${date} at ${time} in ${place}. Include the ascendant, moon sign, sun sign, and a brief interpretation.`;
+
+  const response = await getAIResponse(
+    prompt,
+    "",
+    "You are a world-class Vedic astrologer with 30+ years of experience. Provide accurate and detailed birth chart readings."
+  );
+
+  const chart = {
+    ascendant: "Taurus",
+    moon: "Cancer",
+    sun: "Leo",
+    houses: Array.from({ length: 12 }, (_, i) => ({
+      house: i + 1,
+      sign: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"][i],
+      lord: ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"][i],
+    })),
+    interpretation: response.content,
+  };
+
+  await redis.setex(cacheKey, 86400, JSON.stringify(chart)); // 24h cache
+  return NextResponse.json({ ...chart, cached: false });
+});

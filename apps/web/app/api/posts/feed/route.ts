@@ -1,20 +1,52 @@
-import { NextResponse } from 'next/server';
-import { withErrorHandler } from '@/lib/errors';
-
-// Mock posts
-const allPosts = [
-  { id: '1', content: 'Today I learned something new about Vedic astrology.', imageUrl: 'https://picsum.photos/seed/1/600/600', author: { username: 'astrologer_raj', avatar: 'https://ui-avatars.com/api/?name=Raj&background=9D7DC5&color=fff' }, cheerCount: 12, commentCount: 3, shareCount: 2, createdAt: new Date(Date.now() - 1000*60*15).toISOString() },
-  { id: '2', content: 'Meditation is the key to inner peace.', imageUrl: 'https://picsum.photos/seed/2/600/600', author: { username: 'spiritual_guru', avatar: 'https://ui-avatars.com/api/?name=Guru&background=9D7DC5&color=fff' }, cheerCount: 25, commentCount: 8, shareCount: 5, createdAt: new Date(Date.now() - 1000*60*45).toISOString() },
-  // Add more to test pagination
-];
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+
   const url = new URL(req.url);
-  const cursor = parseInt(url.searchParams.get('cursor') || '0');
-  const limit = 5;
-  const start = cursor;
-  const end = start + limit;
-  const page = allPosts.slice(start, end);
-  const nextCursor = end < allPosts.length ? end : undefined;
-  return NextResponse.json({ posts: page, nextCursor });
+  const cursor = url.searchParams.get("cursor") || undefined;
+  const limit = parseInt(url.searchParams.get("limit") || "10");
+
+  // For MVP, show all posts; later we can filter by followed users.
+  const posts = await prisma.post.findMany({
+    include: {
+      author: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          avatar: true,
+        },
+      },
+      _count: {
+        select: { cheers: true, comments: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+  });
+
+  let nextCursor: string | undefined;
+  if (posts.length > limit) {
+    const last = posts.pop();
+    nextCursor = last?.id;
+  }
+
+  const formatted = posts.map((post) => ({
+    id: post.id,
+    content: post.content,
+    imageUrl: post.mediaUrls?.[0] || null,
+    author: post.author,
+    cheerCount: post._count.cheers,
+    commentCount: post._count.comments,
+    shareCount: post.shareCount,
+    createdAt: post.createdAt,
+  }));
+
+  return NextResponse.json({ posts: formatted, nextCursor });
 });

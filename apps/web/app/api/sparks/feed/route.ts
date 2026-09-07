@@ -1,15 +1,57 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const filter = searchParams.get("filter") || "all";
-  const allActivities = [
-    { id: "1", type: "cheer", actor: { id: "u1", username: "user1", avatar: "https://ui-avatars.com/api/?name=User+1&background=9D7DC5&color=fff" }, target: { id: "p1", content: "Amazing post!" }, sparksEarned: 2, createdAt: new Date(Date.now() - 1000*60*5).toISOString() },
-    { id: "2", type: "comment", actor: { id: "u2", username: "user2", avatar: "https://ui-avatars.com/api/?name=User+2&background=9D7DC5&color=fff" }, target: { id: "p2", content: "Great insight!" }, sparksEarned: 3, createdAt: new Date(Date.now() - 1000*60*30).toISOString() },
-  ];
-  let filtered = allActivities;
-  if (filter !== "all") {
-    filtered = allActivities.filter(a => a.type === filter);
-  }
-  return NextResponse.json(filtered);
-}
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+
+export const GET = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+
+  const url = new URL(req.url);
+  const limit = parseInt(url.searchParams.get("limit") || "20");
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+
+  // For MVP, we show cheers on the user's own posts.
+  // In production, we could union cheers, comments, shares, follows, etc.
+  const cheers = await prisma.cheer.findMany({
+    where: {
+      post: { authorId: userId },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          avatar: true,
+        },
+      },
+      post: {
+        select: {
+          id: true,
+          content: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    skip: offset,
+  });
+
+  const activities = cheers.map((cheer) => ({
+    id: cheer.id,
+    type: "cheer",
+    actor: {
+      id: cheer.user.id,
+      username: cheer.user.username,
+      avatar: cheer.user.avatar,
+    },
+    target: {
+      id: cheer.post.id,
+      content: cheer.post.content,
+    },
+    sparksEarned: 2,
+    createdAt: cheer.createdAt,
+  }));
+
+  return NextResponse.json(activities);
+});

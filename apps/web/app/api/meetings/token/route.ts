@@ -1,29 +1,35 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { generateToken } from '@/lib/livekit/room';
-import { withErrorHandler, AppError } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { generateToken } from "@/lib/livekit/room";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const url = new URL(req.url);
-  const bookingId = url.searchParams.get('bookingId');
-  if (!bookingId) throw new AppError('Booking ID required', 400, 'MISSING_BOOKING_ID');
+  const bookingId = url.searchParams.get("bookingId");
+  if (!bookingId) throw new AppError("Booking ID required", HTTP_STATUS.BAD_REQUEST);
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
     include: { consultant: true },
   });
-  if (!booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
+  if (!booking) throw new AppError("Booking not found", HTTP_STATUS.NOT_FOUND);
 
+  // Check if user is participant
   if (booking.userId !== userId && booking.consultant.userId !== userId) {
-    throw new AppError('Not authorized', 403, 'FORBIDDEN');
+    throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
+  }
+
+  // Check if booking is confirmed
+  if (booking.status !== "CONFIRMED" && booking.status !== "IN_PROGRESS") {
+    throw new AppError("Booking not confirmed or in progress", HTTP_STATUS.BAD_REQUEST);
   }
 
   const roomName = `booking-${bookingId}`;
   const token = await generateToken(roomName, userId);
 
-  return NextResponse.json({ token, wsUrl: process.env.LIVEKIT_WS_URL });
+  return NextResponse.json({ token, roomName, wsUrl: process.env.LIVEKIT_WS_URL });
 });

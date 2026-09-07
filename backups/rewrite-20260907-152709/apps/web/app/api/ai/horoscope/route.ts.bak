@@ -1,0 +1,20 @@
+import { NextResponse } from "next/server";
+import { withErrorHandler } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+
+export const GET = withErrorHandler(async (req: Request) => {
+  const { searchParams } = new URL(req.url);
+  const sign = searchParams.get("sign") || "Aries";
+  const name = searchParams.get("name") || "Seeker";
+  const period = searchParams.get("period") || "Today";
+
+  const prompt = `Generate a detailed ${period} horoscope for ${name}, who is a ${sign}. Include predictions for career, love, health, and spiritual growth. Make it personalized and uplifting.`;
+
+  const response = await getAIResponse(
+    prompt,
+    "",
+    "You are a world-class Vedic astrologer with 30+ years of experience. Provide detailed, accurate, and compassionate horoscope readings."
+  );
+
+  return NextResponse.json({ horoscope: response.content });
+});

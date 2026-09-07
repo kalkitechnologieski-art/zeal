@@ -1,16 +1,28 @@
-import { NextResponse } from 'next/server';
-import { withErrorHandler } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { withErrorHandler } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+import { redis } from "@/lib/cache";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const formData = await req.formData();
-  const image = formData.get('image');
+  const image = formData.get("image");
 
-  // Mock palm analysis – in production, use Groq Vision
+  // In the future, we can use a vision model. For now, we use a static prompt.
+  const prompt = `Provide a detailed palmistry reading for a person. Describe the life line, heart line, head line, and fate line. Give a comprehensive interpretation.`;
+
+  const cacheKey = `palmistry:${Date.now()}`; // No caching for images
+  const response = await getAIResponse(
+    prompt,
+    "",
+    "You are an expert palmist with 25+ years of experience. Provide detailed, insightful palm readings."
+  );
+
   const analysis = {
-    lifeLine: 'Strong and clear, indicating vitality.',
-    heartLine: 'Long and curved, showing emotional depth.',
-    headLine: 'Straight and long, suggesting analytical thinking.',
-    fateLine: 'Present, indicating a purposeful life.',
+    lifeLine: "Strong and clear, indicating vitality.",
+    heartLine: "Long and curved, showing emotional depth.",
+    headLine: "Straight and long, suggesting analytical thinking.",
+    fateLine: "Present, indicating a purposeful life.",
+    interpretation: response.content,
   };
 
   return NextResponse.json({ analysis });

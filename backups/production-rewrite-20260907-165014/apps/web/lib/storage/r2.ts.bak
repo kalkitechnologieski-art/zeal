@@ -1,0 +1,12 @@
+// Stub for Cloudflare R2 storage – replace with real implementation.
+// All uploads are mocked and logged.
+
+export async function uploadToR2(file: any, key: string): Promise<string> {
+  console.log(`[R2 Stub] Uploading file to ${key} (file: ${file?.name || 'unknown'})`);
+  // Return a dummy public URL
+  return `https://storage.zeal.com/${key}`;
+}
+
+export async function deleteFromR2(key: string): Promise<void> {
+  console.log(`[R2 Stub] Deleting ${key}`);
+}

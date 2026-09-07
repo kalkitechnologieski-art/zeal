@@ -1,26 +1,22 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
-let prismaInstance: PrismaClient | null = null;
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-function getPrismaClient() {
-  if (!prismaInstance) {
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is not set');
-    }
-    const adapter = new PrismaNeon({ connectionString });
-    prismaInstance = new PrismaClient({ adapter });
-  }
-  return prismaInstance;
-}
-
-// Create a proxy that lazily initializes the client on first property access
-export const prisma = new Proxy({} as PrismaClient, {
-  get: (target, prop) => {
-    const client = getPrismaClient();
-    return Reflect.get(client, prop);
-  },
+const adapter = new PrismaNeon({
+  connectionString: process.env.DATABASE_URL!,
 });
 
-export * from '@prisma/client';
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    adapter,
+    log:
+      process.env.NODE_ENV === "production"
+        ? ["error", "warn"]
+        : ["query", "error", "warn"],
+  });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export * from "@prisma/client";

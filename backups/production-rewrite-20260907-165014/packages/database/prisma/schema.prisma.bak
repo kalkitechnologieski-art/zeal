@@ -1,0 +1,56 @@
+// ====== BEGIN ADDITIONS (insert after AIConsultant model) ======
+// Add these fields to AIConsultant model:
+//   gender     String?   @default("neutral")
+//   persona    String?   // e.g., "compassionate", "analytical"
+//   voiceStyle String?   // e.g., "calm", "energetic"
+//   isFeatured Boolean   @default(false)
+
+// Add new models at end of file:
+model UserPreferences {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  interests     String[] // category IDs
+  goals         String[]
+  favoriteConsultants String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model UserActivity {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  consultantId  String
+  consultant    Consultant @relation(fields: [consultantId], references: [id])
+  type          String   // view, click, booking
+  createdAt     DateTime @default(now())
+}
+
+
+// ====== ADDED BY PRODUCTION BATCHES ======
+
+// Add fields to AIConsultant model (these will be added via migration later)
+// We'll add them as comments here; actual ALTER TABLE will be done via migration.
+// For now, we add new models.
+
+model UserPreferences {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id])
+  interests     String[] // category IDs
+  goals         String[]
+  favoriteConsultants String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model UserActivity {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  consultantId  String
+  consultant    Consultant @relation(fields: [consultantId], references: [id])
+  type          String   // view, click, booking
+  createdAt     DateTime @default(now())
+}

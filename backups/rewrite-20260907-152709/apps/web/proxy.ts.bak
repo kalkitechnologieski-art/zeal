@@ -1,0 +1,54 @@
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/login(.*)",
+  "/register(.*)",
+  "/api/webhooks(.*)",
+  "/api/health(.*)",
+  "/api/ai/horoscope",
+  "/api/ai/tarot",
+  "/api/ai/kundali",
+  "/api/ai/numerology",
+  "/api/ai/palmistry",
+]);
+
+const isAdminRoute = createRouteMatcher(["/api/admin(.*)"]);
+
+export default clerkMiddleware(async (auth, request) => {
+  const { userId, sessionClaims } = await auth();
+
+  if (isPublicRoute(request)) {
+    return NextResponse.next();
+  }
+
+  if (!userId) {
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Unauthorized", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (isAdminRoute(request)) {
+    const role = sessionClaims?.metadata?.role;
+    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden", code: "FORBIDDEN" },
+        { status: 403 }
+      );
+    }
+  }
+
+  return NextResponse.next();
+});
+
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
+};

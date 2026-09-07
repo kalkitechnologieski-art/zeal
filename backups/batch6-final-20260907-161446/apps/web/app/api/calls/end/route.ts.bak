@@ -1,0 +1,95 @@
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { CallBilling } from "@/lib/calls/billing";
+import { uploadToR2 } from "@/lib/storage/r2";
+import { NotificationService } from "@/lib/notifications/service";
+import { ws } from "@/lib/socket/server";
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+
+  const { sessionId, recordingFile, rating, review } = await req.json();
+  if (!sessionId) throw new AppError("Session ID required", HTTP_STATUS.BAD_REQUEST);
+
+  const session = await prisma.callSession.findUnique({
+    where: { id: sessionId },
+    include: { booking: { include: { consultant: true } } },
+  });
+  if (!session) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
+
+  // Only the user who started the call can end it
+  if (session.userId !== userId) {
+    throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
+  }
+
+  // Calculate duration
+  const durationSeconds = Math.floor((Date.now() - session.startTime.getTime()) / 1000);
+
+  // Upload recording if provided
+  let recordingUrl: string | null = null;
+  if (recordingFile) {
+    // Assume recordingFile is a base64-encoded blob or file path
+    // In production, we would use a proper multipart upload
+    recordingUrl = await uploadToR2(recordingFile, `recordings/${sessionId}.mp4`);
+  }
+
+  // Update session
+  const updatedSession = await prisma.callSession.update({
+    where: { id: sessionId },
+    data: {
+      endTime: new Date(),
+      durationSeconds,
+      status: "ENDED",
+      ...(recordingUrl && { recordingUrl, recordingReady: true }),
+      amount: durationSeconds / 60 * session.booking.consultant.perMinuteRate,
+    },
+  });
+
+  // Finalise billing (charge wallet)
+  await CallBilling.endSession(sessionId);
+
+  // Update booking status back to CONFIRMED
+  await prisma.booking.update({
+    where: { id: session.bookingId! },
+    data: { status: "CONFIRMED" },
+  });
+
+  // Save rating if provided
+  if (rating && rating > 0) {
+    await prisma.booking.update({
+      where: { id: session.bookingId! },
+      data: { rating, review },
+    });
+    // Also update consultant's average rating
+    const consultant = await prisma.consultant.findUnique({
+      where: { id: session.consultantId },
+      select: { rating: true, totalConsultations: true },
+    });
+    if (consultant) {
+      const newRating = (consultant.rating * consultant.totalConsultations + rating) / (consultant.totalConsultations + 1);
+      await prisma.consultant.update({
+        where: { id: session.consultantId },
+        data: {
+          rating: newRating,
+          totalConsultations: consultant.totalConsultations + 1,
+        },
+      });
+    }
+  }
+
+  // Notify both parties
+  const participants = [session.userId, session.booking.consultant.userId];
+  participants.forEach((id) => {
+    ws.to(`user:${id}`).emit("call_ended", {
+      sessionId,
+      durationSeconds,
+      recordingUrl,
+      rating,
+    });
+  });
+
+  return NextResponse.json({ session: updatedSession });
+});

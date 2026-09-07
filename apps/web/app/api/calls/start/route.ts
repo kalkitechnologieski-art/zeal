@@ -1,30 +1,42 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { generateToken } from '@/lib/livekit/room';
-import { CallBilling } from '@/lib/calls/billing';
-import { withErrorHandler, AppError } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { generateToken } from "@/lib/livekit/room";
+import { CallBilling } from "@/lib/calls/billing";
+import { NotificationService } from "@/lib/notifications/service";
+import { ws } from "@/lib/socket/server";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const { bookingId } = await req.json();
-  if (!bookingId) throw new AppError('Booking ID required', 400, 'MISSING_BOOKING_ID');
+  if (!bookingId) throw new AppError("Booking ID required", HTTP_STATUS.BAD_REQUEST);
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { consultant: true },
+    include: { consultant: { include: { user: true } } },
   });
-  if (!booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
+  if (!booking) throw new AppError("Booking not found", HTTP_STATUS.NOT_FOUND);
+
+  if (booking.userId !== userId && booking.consultant.userId !== userId) {
+    throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
+  }
+
+  if (booking.status !== "CONFIRMED") {
+    throw new AppError("Booking not confirmed", HTTP_STATUS.BAD_REQUEST);
+  }
 
   const session = await prisma.callSession.create({
     data: {
       bookingId: booking.id,
-      userId: userId,
+      userId: booking.userId!,
       consultantId: booking.consultantId,
       startTime: new Date(),
-      status: 'INITIATED',
+      status: "INITIATED",
+      durationSeconds: 0,
+      amount: 0,
     },
   });
 
@@ -33,5 +45,23 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   CallBilling.startBilling(session.id, booking.consultant.perMinuteRate);
 
-  return NextResponse.json({ sessionId: session.id, token });
+  // Notify the other participant via WebSocket (stub)
+  const recipientId = booking.userId === userId ? booking.consultant.userId : booking.userId;
+  try {
+    ws.to(`user:${recipientId}`).emit("call_started", {
+      sessionId: session.id,
+      bookingId: booking.id,
+      caller: userId,
+      roomName,
+    });
+  } catch (error) {
+    console.error("WebSocket notification failed (non-critical):", error);
+  }
+
+  await prisma.booking.update({
+    where: { id: bookingId },
+    data: { status: "IN_PROGRESS" },
+  });
+
+  return NextResponse.json({ sessionId: session.id, token, roomName });
 });

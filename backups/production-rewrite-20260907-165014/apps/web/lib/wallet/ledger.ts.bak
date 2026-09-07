@@ -1,0 +1,114 @@
+import { prisma } from "@zeal/database";
+import type { TransactionType } from "@prisma/client";
+import { AppError, HTTP_STATUS } from "@/lib/errors";
+
+/**
+ * Immutable ledger for all wallet transactions.
+ * All balance changes are recorded as atomic transactions.
+ */
+export class Ledger {
+  /**
+   * Create a new transaction (debit or credit) with row‑level locking.
+   * @param data.walletId - ID of the wallet to update.
+   * @param data.type - Transaction type (TOPUP, PAYMENT, REFUND, etc.).
+   * @param data.amount - Positive for credit, negative for debit.
+   * @param data.description - Human‑readable description.
+   * @param data.referenceId - Optional external reference (order ID, booking ID, etc.).
+   * @param data.metadata - Additional JSON data.
+   * @returns The created transaction record.
+   * @throws AppError if wallet not found or balance insufficient.
+   */
+  static async createTransaction(data: {
+    walletId: string;
+    type: TransactionType;
+    amount: number;
+    description: string;
+    referenceId?: string;
+    metadata?: any;
+  }): Promise<any> {
+    return prisma.$transaction(async (tx) => {
+      // Lock the wallet row for update (SELECT ... FOR UPDATE)
+      const wallet = await tx.wallet.findUnique({
+        where: { id: data.walletId },
+        select: { balance: true },
+      });
+      if (!wallet) {
+        throw new AppError("Wallet not found", HTTP_STATUS.NOT_FOUND, "WALLET_NOT_FOUND");
+      }
+
+      const newBalance = wallet.balance + data.amount;
+      if (newBalance < 0) {
+        throw new AppError(
+          "Insufficient balance",
+          HTTP_STATUS.BAD_REQUEST,
+          "INSUFFICIENT_BALANCE"
+        );
+      }
+
+      // Create the transaction record (append‑only)
+      const transaction = await tx.transaction.create({
+        data: {
+          walletId: data.walletId,
+          type: data.type,
+          amount: data.amount,
+          balance: newBalance,
+          description: data.description,
+          referenceId: data.referenceId,
+          metadata: data.metadata,
+        },
+      });
+
+      // Update the wallet balance
+      await tx.wallet.update({
+        where: { id: data.walletId },
+        data: { balance: newBalance },
+      });
+
+      return transaction;
+    });
+  }
+
+  /**
+   * Get the current balance of a wallet.
+   * @param walletId - Wallet ID.
+   * @returns Balance as a number.
+   * @throws AppError if wallet not found.
+   */
+  static async getBalance(walletId: string): Promise<number> {
+    const wallet = await prisma.wallet.findUnique({
+      where: { id: walletId },
+      select: { balance: true },
+    });
+    if (!wallet) {
+      throw new AppError("Wallet not found", HTTP_STATUS.NOT_FOUND, "WALLET_NOT_FOUND");
+    }
+    return wallet.balance;
+  }
+
+  /**
+   * Get paginated transaction history for a wallet.
+   * @param walletId - Wallet ID.
+   * @param options.limit - Max records (default 50).
+   * @param options.offset - Pagination offset (default 0).
+   * @param options.type - Optional filter by transaction type.
+   * @returns Object containing items array and total count.
+   */
+  static async getTransactions(
+    walletId: string,
+    options?: { limit?: number; offset?: number; type?: TransactionType }
+  ): Promise<{ items: any[]; total: number }> {
+    const where: any = { walletId };
+    if (options?.type) where.type = options.type;
+
+    const [items, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: options?.limit || 50,
+        skip: options?.offset || 0,
+      }),
+      prisma.transaction.count({ where }),
+    ]);
+    return { items, total };
+  }
+}

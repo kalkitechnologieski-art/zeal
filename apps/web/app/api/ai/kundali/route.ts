@@ -1,20 +1,42 @@
-import { NextResponse } from 'next/server';
-import { withErrorHandler } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { withErrorHandler } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+import { redis } from "@/lib/cache";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { date, time, place } = await req.json();
 
-  // Mock kundali data – in production, use astrological library or AI
+  const cacheKey = `kundali:${date}:${time}:${place}`;
+  const cached = await redis.get(cacheKey);
+  if (cached && typeof cached === "string") {
+    try {
+      const parsed = JSON.parse(cached);
+      return NextResponse.json({ ...parsed, cached: true });
+    } catch {
+      // ignore invalid cache
+    }
+  }
+
+  const prompt = `Generate a detailed Vedic birth chart (Kundali) for a person born on ${date} at ${time} in ${place}. Include the ascendant, moon sign, sun sign, and a brief interpretation.`;
+
+  const response = await getAIResponse(
+    prompt,
+    "",
+    "You are a world-class Vedic astrologer with 30+ years of experience. Provide accurate and detailed birth chart readings."
+  );
+
   const chart = {
-    ascendant: 'Taurus',
-    moon: 'Cancer',
-    sun: 'Leo',
-    houses: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((h) => ({
-      house: h,
-      sign: ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'][h - 1],
-      lord: ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'][h - 1],
+    ascendant: "Taurus",
+    moon: "Cancer",
+    sun: "Leo",
+    houses: Array.from({ length: 12 }, (_, i) => ({
+      house: i + 1,
+      sign: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"][i],
+      lord: ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"][i],
     })),
+    interpretation: response.content,
   };
 
-  return NextResponse.json({ chart });
+  await redis.setex(cacheKey, 86400, JSON.stringify(chart));
+  return NextResponse.json({ ...chart, cached: false });
 });

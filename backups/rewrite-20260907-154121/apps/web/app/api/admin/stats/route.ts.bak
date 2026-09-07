@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+
+export const GET = withErrorHandler(async () => {
+  const { userId, sessionClaims } = await auth();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  const role = (sessionClaims as any)?.metadata?.role;
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
+
+  const [users, consultants, bookings, revenueToday] = await Promise.all([
+    prisma.user.count(),
+    prisma.consultant.count({ where: { isActive: true } }),
+    prisma.booking.count({ where: { status: "CONFIRMED" } }),
+    prisma.booking.aggregate({
+      where: {
+        status: "CONFIRMED",
+        scheduledAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  return NextResponse.json({
+    users,
+    consultants,
+    bookings,
+    revenueToday: revenueToday._sum.amount || 0,
+  });
+});

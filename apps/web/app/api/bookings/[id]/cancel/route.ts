@@ -1,44 +1,58 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { Ledger } from '@/lib/wallet/ledger';
-import { NotificationService } from '@/lib/notifications/service';
-import { withErrorHandler, AppError } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { NotificationService } from "@/lib/notifications/service";
+import { Ledger } from "@/lib/wallet/ledger";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const POST = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   const { id } = await params;
 
-  const booking = await prisma.booking.findFirst({
-    where: { id, userId },
-    include: { consultant: { include: { user: true } } },
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+    include: { consultant: { include: { user: true } }, user: true },
   });
-  if (!booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
+  if (!booking) throw new AppError("Booking not found", HTTP_STATUS.NOT_FOUND);
 
-  if (booking.status === 'CONFIRMED') {
-    await Ledger.createTransaction({
-      walletId: booking.userId!,
-      type: 'REFUND',
-      amount: booking.amount,
-      description: `Refund for cancelled booking ${booking.id}`,
-      referenceId: booking.id,
-    });
+  // Only the user, consultant, or admin can cancel (admin check via role is optional; here we only check user/consultant)
+  if (booking.userId !== userId && booking.consultant.userId !== userId) {
+    throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
+  }
+
+  if (booking.status === "CANCELLED") return NextResponse.json({ booking });
+
+  // If confirmed, refund the user's wallet (only if there is a user)
+  if (booking.status === "CONFIRMED" && booking.userId) {
+    const wallet = await prisma.wallet.findUnique({ where: { userId: booking.userId } });
+    if (wallet) {
+      await Ledger.createTransaction({
+        walletId: wallet.id,
+        type: "REFUND",
+        amount: booking.amount,
+        description: `Refund for cancelled booking ${booking.id}`,
+        referenceId: booking.id,
+      });
+    }
   }
 
   const updated = await prisma.booking.update({
     where: { id },
-    data: { status: 'CANCELLED' },
+    data: { status: "CANCELLED" },
+    include: { consultant: { include: { user: true } }, user: true },
   });
 
+  // Notify the other party
+  const recipientId = booking.userId ?? booking.consultant.userId;
   await NotificationService.createNotification({
-    userId: booking.consultant.userId,
-    type: 'booking_cancelled',
-    message: `Booking cancelled by user`,
-    redirectUrl: `/admin/bookings/${booking.id}`,
+    userId: recipientId,
+    type: "booking",
+    message: `Booking ${booking.id} has been cancelled.`,
+    redirectUrl: `/bookings`,
     actorId: userId,
   });
 

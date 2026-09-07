@@ -1,0 +1,57 @@
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { instamojo } from "@/lib/wallet/instamojo";
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const { userId } = await auth();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+
+  const { amount } = await req.json();
+  if (!amount || amount < 1) {
+    throw new AppError("Invalid amount", HTTP_STATUS.BAD_REQUEST);
+  }
+
+  let wallet = await prisma.wallet.findUnique({ where: { userId } });
+  if (!wallet) {
+    wallet = await prisma.wallet.create({
+      data: {
+        userId,
+        balance: 0,
+        escrow: 0,
+        pendingIn: 0,
+        pendingOut: 0,
+        blocked: 0,
+      },
+    });
+  }
+
+  const paymentRequest = await instamojo.createPaymentRequest({
+    amount: amount,
+    purpose: "Zeal Wallet Top-up",
+    buyer_name: "User",
+    buyer_email: "user@example.com",
+    buyer_phone: "9999999999",
+    redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/wallet`,
+    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/wallet/webhooks/instamojo`,
+  });
+
+  await prisma.transaction.create({
+    data: {
+      walletId: wallet.id,
+      type: "TOPUP",
+      amount: 0,
+      balance: wallet.balance,
+      description: `Instamojo payment request ${paymentRequest.id}`,
+      referenceId: paymentRequest.id,
+      metadata: { paymentRequestId: paymentRequest.id, amount },
+    },
+  });
+
+  return NextResponse.json({
+    paymentRequestId: paymentRequest.id,
+    longurl: paymentRequest.longurl,
+    amount: paymentRequest.amount,
+  });
+});

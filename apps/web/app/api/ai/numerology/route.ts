@@ -1,39 +1,44 @@
-import { NextResponse } from 'next/server';
-import { withErrorHandler } from '@/lib/errors';
+import { NextResponse } from "next/server";
+import { withErrorHandler } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+import { redis } from "@/lib/cache";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { name, birthDate } = await req.json();
 
-  // Calculate life path number
-  const numbers = birthDate.replace(/-/g, '').split('').map(Number);
-  const lifePath = numbers.reduce((a: number, b: number) => a + b, 0);
-  const finalNumber = lifePath > 9 ? lifePath.toString().split('').map(Number).reduce((a: number, b: number) => a + b, 0) : lifePath;
+  const cacheKey = `numerology:${name}:${birthDate}`;
+  const cached = await redis.get(cacheKey);
+  if (cached && typeof cached === "string") {
+    try {
+      const parsed = JSON.parse(cached);
+      return NextResponse.json({ ...parsed, cached: true });
+    } catch {
+      // ignore invalid cache
+    }
+  }
 
-  const meanings: Record<number, string> = {
-    1: 'Leader, independent, ambitious. You are a natural-born leader with a strong drive to succeed.',
-    2: 'Diplomatic, cooperative, intuitive. You are a peacemaker with a deep understanding of others.',
-    3: 'Creative, social, expressive. You are an artist at heart, full of ideas and enthusiasm.',
-    4: 'Practical, disciplined, reliable. You are the foundation upon which others build.',
-    5: 'Adventurous, versatile, freedom-loving. You are a free spirit, always seeking new experiences.',
-    6: 'Caring, responsible, nurturing. You are the caregiver, always putting others first.',
-    7: 'Intellectual, spiritual, analytical. You are the seeker of truth and wisdom.',
-    8: 'Ambitious, authoritative, successful. You are born to lead and achieve great things.',
-    9: 'Humanitarian, compassionate, visionary. You are here to make the world a better place.',
+  const prompt = `Calculate the life path number for ${name} born on ${birthDate}. Provide a detailed numerology report including life path number, destiny number, personality number, and detailed meanings.`;
+
+  const response = await getAIResponse(
+    prompt,
+    "",
+    "You are a master numerologist with 20+ years of experience. Provide detailed, accurate numerology reports."
+  );
+
+  const numbers = birthDate.replace(/-/g, "").split("").map(Number);
+  let lifePath = numbers.reduce((a: number, b: number) => a + b, 0);
+  while (lifePath > 9 && lifePath !== 11 && lifePath !== 22 && lifePath !== 33) {
+    lifePath = lifePath.toString().split("").map(Number).reduce((a: number, b: number) => a + b, 0);
+  }
+
+  const result = {
+    lifePath,
+    meaning: response.content,
+    nameNumber: name.length,
+    destinyNumber: lifePath + name.length,
+    advice: "Embrace your strengths and work on your challenges.",
   };
 
-  const detailedMeaning = meanings[finalNumber] || 'A unique path awaits you. Your journey is special and full of potential.';
-  const nameNumber = name.length;
-
-  // Additional numerology details
-  const personalityNumber = name.length > 5 ? 'You have a strong presence that draws others to you.' : 'You are thoughtful and introspective.';
-  const destinyNumber = finalNumber + nameNumber;
-
-  return NextResponse.json({
-    lifePath: finalNumber,
-    meaning: detailedMeaning,
-    nameNumber,
-    personalityNumber,
-    destinyNumber,
-    advice: 'Embrace your strengths and work on your challenges. Your life path is a guide, not a destiny.',
-  });
+  await redis.setex(cacheKey, 86400, JSON.stringify(result));
+  return NextResponse.json({ ...result, cached: false });
 });

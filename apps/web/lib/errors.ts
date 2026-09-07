@@ -1,3 +1,17 @@
+import { ZodError } from "zod";
+
+export const HTTP_STATUS = {
+  OK: 200,
+  CREATED: 201,
+  BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  UNPROCESSABLE_ENTITY: 422,
+  INTERNAL_SERVER_ERROR: 500,
+} as const;
+
 export class AppError extends Error {
   public readonly statusCode: number;
   public readonly code: string;
@@ -5,12 +19,12 @@ export class AppError extends Error {
 
   constructor(
     message: string,
-    statusCode = 500,
-    code = 'INTERNAL_ERROR',
+    statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR,
+    code: string = "INTERNAL_ERROR",
     details?: any,
   ) {
     super(message);
-    this.name = 'AppError';
+    this.name = "AppError";
     this.statusCode = statusCode;
     this.code = code;
     this.details = details;
@@ -20,41 +34,35 @@ export class AppError extends Error {
 
 export class ValidationError extends AppError {
   constructor(message: string, details?: any) {
-    super(message, 400, 'VALIDATION_ERROR', details);
+    super(message, HTTP_STATUS.BAD_REQUEST, "VALIDATION_ERROR", details);
   }
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message = 'Unauthorized') {
-    super(message, 401, 'AUTHENTICATION_ERROR');
-  }
-}
-
-export class PaymentError extends AppError {
-  constructor(message: string, details?: any) {
-    super(message, 402, 'PAYMENT_ERROR', details);
+  constructor(message: string = "Unauthorized") {
+    super(message, HTTP_STATUS.UNAUTHORIZED, "AUTHENTICATION_ERROR");
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(resource: string) {
-    super(`${resource} not found`, 404, 'NOT_FOUND');
-  }
-}
-
-export class ConflictError extends AppError {
-  constructor(message: string) {
-    super(message, 409, 'CONFLICT');
+    super(`${resource} not found`, HTTP_STATUS.NOT_FOUND, "NOT_FOUND");
   }
 }
 
 export function withErrorHandler(
-  handler: (req: Request, ...args: any[]) => Promise<Response>
+  handler: (req: Request, ...args: any[]) => Promise<Response>,
 ) {
   return async (req: Request, ...args: any[]) => {
     try {
       return await handler(req, ...args);
     } catch (error) {
+      console.error("API Error:", {
+        path: req.url,
+        method: req.method,
+        error: error instanceof Error ? error.stack : error,
+      });
+
       if (error instanceof AppError) {
         return new Response(
           JSON.stringify({
@@ -67,17 +75,40 @@ export function withErrorHandler(
           }),
           {
             status: error.statusCode,
-            headers: { 'Content-Type': 'application/json' },
-          }
+            headers: { "Content-Type": "application/json" },
+          },
         );
       }
-      console.error('Unhandled error:', error);
+
+      if (error instanceof ZodError) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              message: "Validation failed",
+              code: "VALIDATION_ERROR",
+              details: error.flatten(),
+            },
+          }),
+          {
+            status: HTTP_STATUS.BAD_REQUEST,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: { message: 'Internal server error', code: 'INTERNAL_ERROR' },
+          error: {
+            message: "Internal server error",
+            code: "INTERNAL_ERROR",
+          },
         }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
+        {
+          status: HTTP_STATUS.INTERNAL_SERVER_ERROR,
+          headers: { "Content-Type": "application/json" },
+        },
       );
     }
   };

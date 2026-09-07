@@ -1,20 +1,15 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { createOrder } from '@/lib/wallet/razorpay';
-import { withErrorHandler, AppError, ValidationError } from '@/lib/errors';
-import { TopupSchema } from '@zeal/types';
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { instamojo } from "@/lib/wallet/instamojo";
+import { TopupSchema } from "@/lib/validation";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
-  const body = await req.json();
-  const parsed = TopupSchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError('Invalid top-up data', parsed.error.flatten());
-  }
-  const { amount } = parsed.data;
+  const { amount } = TopupSchema.parse(await req.json());
 
   let wallet = await prisma.wallet.findUnique({ where: { userId } });
   if (!wallet) {
@@ -23,27 +18,28 @@ export const POST = withErrorHandler(async (req: Request) => {
     });
   }
 
-  // Create Razorpay order
-  const order = await createOrder(amount, 'INR', `topup_${userId}_${Date.now()}`);
+  const paymentRequest = await instamojo.createPaymentRequest({
+    amount,
+    purpose: "Zeal Wallet Top-up",
+    redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/wallet`,
+    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/wallet/webhooks/instamojo`,
+  });
 
-  // Store pending transaction (will be confirmed by webhook)
   await prisma.transaction.create({
     data: {
       walletId: wallet.id,
-      type: 'TOPUP',
-      amount: amount,
+      type: "TOPUP",
+      amount: 0,
       balance: wallet.balance,
-      description: `Razorpay top-up order ${order.id}`,
-      referenceId: order.id,
-      metadata: { order_id: order.id, amount: order.amount / 100 },
+      description: `Instamojo payment request ${paymentRequest.id}`,
+      referenceId: paymentRequest.id,
+      metadata: { paymentRequestId: paymentRequest.id, amount },
     },
   });
 
   return NextResponse.json({
-    orderId: order.id,
-    amount: Number(order.amount) / 100,
-    currency: order.currency,
-    key: process.env.RAZORPAY_KEY_ID,
-    // You can also pass a redirect URL or checkout options here
+    paymentRequestId: paymentRequest.id,
+    longurl: paymentRequest.longurl,
+    amount: paymentRequest.amount,
   });
 });

@@ -5,17 +5,7 @@ import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { CallBilling } from "@/lib/calls/billing";
 import { uploadToR2 } from "@/lib/storage/r2";
 import { NotificationService } from "@/lib/notifications/service";
-
-// WebSocket fallback for production (Vercel does not support WebSockets)
-let fallbackWs: any;
-try {
-  fallbackWs = require("@/lib/socket/server").ws;
-} catch {
-  fallbackWs = {
-    to: () => ({ emit: () => {} }),
-    emit: () => {},
-  };
-}
+import { ws } from "@/lib/socket/server";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
@@ -30,6 +20,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   });
   if (!session) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
 
+  // Ensure the booking exists
   if (!session.booking) {
     throw new AppError("Booking not found for this session", HTTP_STATUS.NOT_FOUND);
   }
@@ -69,14 +60,16 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   // TODO: Implement rating/review in a separate Review model
   if (rating && rating > 0) {
+    // For now, just log the rating – we'll add a review model later
     console.log(`Rating for booking ${session.bookingId}: ${rating}, review: ${review}`);
+    // Optionally store in a separate Review table (to be created)
   }
 
-  // Notify both parties via WebSocket (fallback)
+  // Notify both parties
   const participants = [session.userId, session.booking.consultant.userId];
   participants.forEach((id) => {
     try {
-      fallbackWs.to(`user:${id}`).emit("call_ended", {
+      ws.to(`user:${id}`).emit("call_ended", {
         sessionId,
         durationSeconds,
         recordingUrl,

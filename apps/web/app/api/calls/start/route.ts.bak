@@ -5,17 +5,7 @@ import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { generateToken } from "@/lib/livekit/room";
 import { CallBilling } from "@/lib/calls/billing";
 import { NotificationService } from "@/lib/notifications/service";
-
-// WebSocket fallback for production (Vercel does not support WebSockets)
-let fallbackWs: any;
-try {
-  fallbackWs = require("@/lib/socket/server").ws;
-} catch {
-  fallbackWs = {
-    to: () => ({ emit: () => {} }),
-    emit: () => {},
-  };
-}
+import { ws } from "@/lib/socket/server";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const { userId } = await auth();
@@ -55,10 +45,10 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   CallBilling.startBilling(session.id, booking.consultant.perMinuteRate);
 
-  // Notify the other participant via WebSocket (fallback)
+  // Notify the other participant via WebSocket (stub)
   const recipientId = booking.userId === userId ? booking.consultant.userId : booking.userId;
   try {
-    fallbackWs.to(`user:${recipientId}`).emit("call_started", {
+    ws.to(`user:${recipientId}`).emit("call_started", {
       sessionId: session.id,
       bookingId: booking.id,
       caller: userId,

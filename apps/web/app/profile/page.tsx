@@ -1,15 +1,13 @@
 "use client";
 
 import { useAuth } from "@/components/providers/SupabaseAuthProvider";
-import { motion } from "framer-motion";
-import { Sparkles, Check, Pencil, LayoutDashboard, LogIn } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, AvatarImage, AvatarFallback } from "@zeal/ui";
-import { PostGrid } from "@/components/profile/PostGrid";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { Sparkles, LogIn, Pencil, LayoutDashboard, Check } from "lucide-react";
+import { Button, Avatar, AvatarImage, AvatarFallback, Tabs, TabsList, TabsTrigger, TabsContent } from "@zeal/ui";
+import { PostGrid } from "@/components/profile/PostGrid";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -25,8 +23,8 @@ export default function ProfilePage() {
         <h2 className="text-2xl font-bold text-[#5E4B8B] dark:text-white mb-2">
           Please log in to view your profile
         </h2>
-        <p className="text-[#B8A1D9] dark:text-gray-400 mb-6">
-          Sign in to access your profile and manage your consultations.
+        <p className="text-[#B8A1D9] dark:text-gray-400 mb-6 max-w-sm">
+          Sign in to access your profile, manage consultations, and connect with healers.
         </p>
         <Link href="/auth/login">
           <Button variant="primary" className="flex items-center gap-2 btn-luxury">

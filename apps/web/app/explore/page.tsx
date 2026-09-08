@@ -179,3 +179,4 @@ export default function ExplorePage() {
     </div>
   );
 }
+export const dynamic = "force-dynamic";

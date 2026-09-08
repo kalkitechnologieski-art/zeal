@@ -28,3 +28,4 @@ export default function ServicesPage() {
     </div>
   );
 }
+export const dynamic = "force-dynamic";

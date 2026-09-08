@@ -6,7 +6,7 @@ export default async function proxy(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    console.warn("[Proxy] Supabase env vars missing – skipping auth (build mode)");
+    console.warn("[Proxy] Supabase env vars missing – skipping auth");
     return NextResponse.next();
   }
 
@@ -18,51 +18,74 @@ export default async function proxy(request: NextRequest) {
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
-      },
-      set(name, value, options) {
-        response.cookies.set({ name, value, ...options });
-      },
-      remove(name, options) {
-        response.cookies.set({ name, value: "", ...options });
-      },
+      get(name) { return request.cookies.get(name)?.value; },
+      set(name, value, options) { response.cookies.set({ name, value, ...options }); },
+      remove(name, options) { response.cookies.set({ name, value: "", ...options }); },
     },
   });
 
   const { data: { session } } = await supabase.auth.getSession();
+  const path = request.nextUrl.pathname;
 
-  const isPublicRoute = [
-    "/",
-    "/auth/login",
-    "/auth/register",
-    "/api/webhooks",
-    "/api/health",
-    "/api/posts/feed",
-    "/api/ai/horoscope",
-    "/api/ai/tarot",
-    "/api/ai/kundali",
-    "/api/ai/numerology",
-    "/api/ai/palmistry",
-    "/services",
-    "/services/horoscope",
-    "/services/tarot",
-    "/services/kundali",
-    "/services/numerology",
-    "/services/palmistry",
-    "/services/matchmaking",
-    "/ai-astrologers",
-  ].some(path => request.nextUrl.pathname === path ||
-                    request.nextUrl.pathname.startsWith(path + "/"));
+  // ─── PUBLIC ROUTES ──────────────────────────────────────────────────────────
+  const isPublicRoute =
+    path === "/" ||
+    path === "/explore" ||
+    path.startsWith("/explore/") ||
+    path === "/services" ||
+    path.startsWith("/services/") ||
+    path.startsWith("/ai-astrologers") ||
+    path.startsWith("/consultant/") ||
+    path.startsWith("/auth/") ||
+    path === "/auth/login" ||
+    path === "/auth/register" ||
+    path === "/auth/callback" ||
+    path.startsWith("/api/health") ||
+    path.startsWith("/api/ai/") ||
+    path === "/api/posts/feed" ||
+    path.startsWith("/api/explore/") ||
+    path.startsWith("/api/webhooks") ||
+    path === "/api/bazaar/listings";
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") ||
-                       request.nextUrl.pathname.startsWith("/api/admin");
+  // ─── PRIVATE ROUTES (require auth) ──────────────────────────────────────────
+  const isPrivateRoute =
+    path.startsWith("/dashboard") ||
+    path.startsWith("/profile") ||
+    path.startsWith("/bookings") ||
+    path.startsWith("/booking") ||
+    path.startsWith("/chat") ||
+    path.startsWith("/sparks") ||
+    path.startsWith("/wallet") ||
+    path.startsWith("/referral") ||
+    path.startsWith("/quests") ||
+    path.startsWith("/bazaar") ||
+    path.startsWith("/create") ||
+    path.startsWith("/notifications") ||
+    path.startsWith("/payment") ||
+    path.startsWith("/api/bookings") ||
+    path.startsWith("/api/wallet") ||
+    path.startsWith("/api/calls") ||
+    path.startsWith("/api/admin") ||
+    path.startsWith("/api/posts/create") ||
+    path.startsWith("/api/notifications") ||
+    path.startsWith("/api/sparks") ||
+    path.startsWith("/api/referral") ||
+    path.startsWith("/api/quests") ||
+    path.startsWith("/api/meetings/token");
 
-  if (!isPublicRoute && !session) {
-    if (request.nextUrl.pathname.startsWith("/api/")) {
+  // ─── ADMIN ROUTES (require admin role) ──────────────────────────────────────
+  const isAdminRoute = path.startsWith("/admin") || path.startsWith("/api/admin");
+
+  // ─── AUTH CHECK ──────────────────────────────────────────────────────────────
+  if (isPublicRoute) return response;
+
+  if (isPrivateRoute && !session) {
+    if (path.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("redirect", path);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (isAdminRoute && session) {

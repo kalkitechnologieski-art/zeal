@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
 import { useAuth } from "@/components/providers/SupabaseAuthProvider";
-import { motion } from 'framer-motion';
-import { Sparkles, Check, Pencil, LayoutDashboard, MessageCircle, Phone, Calendar } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, AvatarImage, AvatarFallback, Badge } from '@zeal/ui';
-import { PostGrid } from '@/components/profile/PostGrid';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { motion } from "framer-motion";
+import { Sparkles, Check, Pencil, LayoutDashboard, LogIn } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, AvatarImage, AvatarFallback } from "@zeal/ui";
+import { PostGrid } from "@/components/profile/PostGrid";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -17,7 +17,30 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return <div className="flex justify-center py-12 text-[#B8A1D9]">Please log in to view your profile.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+        <div className="w-20 h-20 rounded-full bg-[#F4E8F7] dark:bg-gray-800 flex items-center justify-center mb-4">
+          <Sparkles className="w-10 h-10 text-[#9D7DC5]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[#5E4B8B] dark:text-white mb-2">
+          Please log in to view your profile
+        </h2>
+        <p className="text-[#B8A1D9] dark:text-gray-400 mb-6">
+          Sign in to access your profile and manage your consultations.
+        </p>
+        <Link href="/auth/login">
+          <Button variant="primary" className="flex items-center gap-2 btn-luxury">
+            <LogIn className="w-4 h-4" /> Sign In
+          </Button>
+        </Link>
+        <p className="mt-4 text-sm text-[#B8A1D9] dark:text-gray-400">
+          Don't have an account?{" "}
+          <Link href="/auth/register" className="text-[#9D7DC5] hover:underline">
+            Register
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   const profile = {

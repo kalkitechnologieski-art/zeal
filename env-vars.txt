@@ -1,0 +1,25 @@
+# =============================================================================
+# PROJECT ZEAL – VERCEL ENVIRONMENT VARIABLES
+# =============================================================================
+# Add these variables to your Vercel project:
+#   Project Settings → Environment Variables
+#
+# For Supabase, get these values from:
+#   Supabase Dashboard → Settings → API
+# =============================================================================
+
+NEXT_PUBLIC_SUPABASE_URL=https://zyrunsnweznyrhuroduo.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5cnVuc253ZXpueXJodXJvZHVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc0OTc2MDgsImV4cCI6MjEwMzA3MzYwOH0.kOPtlaJvT0fnGYit6dG43rekXDin3HoinUNrFB8vtL0
+DATABASE_URL=postgresql://postgres:mKpfHhousvbIp4bP@db.zyrunsnweznyrhuroduo.supabase.co:5432/postgres
+NEXT_PUBLIC_WS_URL=wss://zeal-web.vercel.app/
+GROQ_API_KEY=your-groq-key
+RAZORPAY_KEY_ID=rzp_xxx
+RAZORPAY_KEY_SECRET=xxx
+INSTAMOJO_CLIENT_ID=xxx
+INSTAMOJO_CLIENT_SECRET=xxx
+LIVEKIT_API_KEY=xxx
+LIVEKIT_API_SECRET=xxx
+
+# Optional
+NEXT_PUBLIC_VERCEL_ANALYTICS_ID=xxx
+NEXT_PUBLIC_SENTRY_DSN=xxx

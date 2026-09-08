@@ -1,5 +1,7 @@
 "use client";
-'use client';
+
+export const dynamic = "force-dynamic";
+
 import { useAIconsultants } from '@/hooks/useAIconsultants';
 import { ConsultantCard } from '@/components/shared/ConsultantCard';
 import { Loader2 } from 'lucide-react';

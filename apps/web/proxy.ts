@@ -1,39 +1,48 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
 export default async function proxy(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // During build, skip auth checks
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn("[Proxy] Supabase env vars missing – skipping auth (build mode)");
+    return NextResponse.next();
+  }
+
+  const { createServerClient } = await import("@supabase/ssr");
+
   let response = NextResponse.next({
     request: { headers: request.headers },
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          response.cookies.set({ name, value: "", ...options });
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      get(name: string) {
+        return request.cookies.get(name)?.value;
       },
-    }
-  );
+      set(name, value, options) {
+        response.cookies.set({ name, value, ...options });
+      },
+      remove(name, options) {
+        response.cookies.set({ name, value: "", ...options });
+      },
+    },
+  });
 
   const { data: { session } } = await supabase.auth.getSession();
 
   const isPublicRoute = [
     "/", "/auth/login", "/auth/register",
     "/api/webhooks", "/api/health",
-    "/api/ai/horoscope", "/api/ai/tarot", "/api/ai/kundali", "/api/ai/numerology", "/api/ai/palmistry"
-  ].some(path => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + "/"));
+    "/api/ai/horoscope", "/api/ai/tarot", "/api/ai/kundali",
+    "/api/ai/numerology", "/api/ai/palmistry"
+  ].some(path => request.nextUrl.pathname === path ||
+                    request.nextUrl.pathname.startsWith(path + "/"));
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/api/admin");
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") ||
+                       request.nextUrl.pathname.startsWith("/api/admin");
 
   if (!isPublicRoute && !session) {
     if (request.nextUrl.pathname.startsWith("/api/")) {

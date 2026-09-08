@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Check, CheckCheck, Heart, UserPlus, MessageCircle, Calendar, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 import { Button, Badge, Avatar, AvatarImage, AvatarFallback } from "@zeal/ui";
 import { formatDistanceToNow } from "date-fns";
 
@@ -17,7 +17,7 @@ const iconMap = {
 };
 
 export default function NotificationsPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);

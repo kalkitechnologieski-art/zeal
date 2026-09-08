@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
@@ -7,13 +7,15 @@ export const GET = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) => {
-  const { userId: authUserId } = await auth();
-  const { userId } = await params;
+  const userId = await getUserId();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
-  if (authUserId !== userId) {
-    // Public profile – limited fields (bio is on consultant, not user)
+  const { userId: targetUserId } = await params;
+
+  if (userId !== targetUserId) {
+    // Public profile – limited fields
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: targetUserId },
       select: {
         id: true,
         username: true,
@@ -56,9 +58,13 @@ export const PUT = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) => {
-  const { userId: authUserId } = await auth();
-  const { userId } = await params;
-  if (authUserId !== userId) throw new AppError("Unauthorized", HTTP_STATUS.FORBIDDEN);
+  const userId = await getUserId();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+
+  const { userId: targetUserId } = await params;
+  if (userId !== targetUserId) {
+    throw new AppError("Unauthorized", HTTP_STATUS.FORBIDDEN);
+  }
 
   const body = await req.json();
   const { username, name, avatar, isHealer, specialties, languages, perMinuteRate, faith, availability, category, bio } = body;

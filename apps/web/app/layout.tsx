@@ -1,5 +1,5 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SupabaseAuthProvider } from "@/components/providers/SupabaseAuthProvider";
 import { QueryProvider } from "@/lib/query/provider";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -23,29 +23,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider afterSignOutUrl="/">
-      <html lang="en" suppressHydrationWarning>
-        <body className="bg-background text-foreground antialiased">
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem={false}
-            themes={["light", "dark"]}
-            disableTransitionOnChange
-          >
-            <QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-background text-foreground antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          themes={["light", "dark"]}
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <SupabaseAuthProvider>
               <div className="flex flex-col min-h-screen min-h-dvh">
                 <TopBar />
-                <main className="flex-1 overflow-y-auto pb-20 md:pb-24">
+                <main className="flex-1 overflow-y-auto pb-14 md:pb-20">
                   {children}
                 </main>
                 <BottomNav />
               </div>
-              <Toaster />
-            </QueryProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+            </SupabaseAuthProvider>
+          </QueryProvider>
+          <Toaster />
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

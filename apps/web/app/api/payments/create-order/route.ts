@@ -1,10 +1,10 @@
+import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { instamojo } from "@/lib/wallet/instamojo";
 
 export const POST = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const { amount, purpose, buyer_name, buyer_email, buyer_phone } =

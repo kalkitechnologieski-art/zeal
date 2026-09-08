@@ -1,30 +1,30 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { Ledger } from "@/lib/wallet/ledger";
 import { AIEndSchema } from "@/lib/validation";
 
 export const POST = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const { sessionId } = AIEndSchema.parse(await req.json());
 
-  const session = await prisma.callSession.findUnique({
+  const callSession = await prisma.callSession.findUnique({
     where: { id: sessionId },
     include: { aiConsultant: true, user: { include: { wallet: true } } },
   });
-  if (!session) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
-  if (session.userId !== userId) {
+  if (!callSession) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
+  if (callSession.userId !== userId) {
     throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
   }
 
   const durationSeconds = Math.floor(
-    (Date.now() - session.startTime.getTime()) / 1000,
+    (Date.now() - callSession.startTime.getTime()) / 1000,
   );
   const minutes = durationSeconds / 60;
-  const amount = minutes * (session.aiConsultant?.perMinuteRate || 0);
+  const amount = minutes * (callSession.aiConsultant?.perMinuteRate || 0);
 
   const updated = await prisma.callSession.update({
     where: { id: sessionId },
@@ -38,14 +38,14 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   if (amount > 0) {
     const wallet = await prisma.wallet.findUnique({
-      where: { userId: session.userId },
+      where: { userId: callSession.userId },
     });
     if (!wallet) throw new AppError("Wallet not found", HTTP_STATUS.NOT_FOUND);
     await Ledger.createTransaction({
       walletId: wallet.id,
       type: "PAYMENT",
       amount: -amount,
-      description: `AI Chat with ${session.aiConsultant?.name || "AI"}`,
+      description: `AI Chat with ${callSession.aiConsultant?.name || "AI"}`,
       referenceId: sessionId,
     });
   }

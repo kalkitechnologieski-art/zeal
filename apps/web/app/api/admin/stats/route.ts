@@ -1,33 +1,31 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
-export const GET = withErrorHandler(async () => {
-  const { userId, sessionClaims } = await auth();
+export const GET = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-  const role = (sessionClaims as any)?.metadata?.role;
-  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
-    throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
-  }
-
-  const [users, consultants, bookings, revenueToday] = await Promise.all([
-    prisma.user.count(),
-    prisma.consultant.count({ where: { isActive: true } }),
-    prisma.booking.count({ where: { status: "CONFIRMED" } }),
-    prisma.booking.aggregate({
-      where: {
-        status: "CONFIRMED",
-        scheduledAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") as any;
+  const limit = parseInt(url.searchParams.get("limit") || "50");
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const where: any = {};
+  if (status) where.status = status;
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        consultant: {
+          include: { user: { select: { id: true, name: true } } },
+        },
       },
-      _sum: { amount: true },
+      orderBy: { scheduledAt: "desc" },
+      take: limit,
+      skip: offset,
     }),
+    prisma.booking.count({ where }),
   ]);
-
-  return NextResponse.json({
-    users,
-    consultants,
-    bookings,
-    revenueToday: revenueToday._sum.amount || 0,
-  });
+  return NextResponse.json({ bookings, total });
 });

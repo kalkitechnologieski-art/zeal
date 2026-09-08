@@ -1,3 +1,4 @@
+"use client";
 'use client';
 import { useAIconsultants } from '@/hooks/useAIconsultants';
 import { ConsultantCard } from '@/components/shared/ConsultantCard';

@@ -1,27 +1,31 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@zeal/database';
-import { withErrorHandler, AppError, ValidationError } from '@/lib/errors';
-import { PlatformFeeSchema } from '@zeal/types';
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { prisma } from "@zeal/database";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
-export const GET = withErrorHandler(async () => {
-  return NextResponse.json({ feePercent: 10, minFee: 0, maxFee: 500 });
-});
-
-export const PUT = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
-  if (!userId) throw new AppError('Unauthorized', 401, 'UNAUTHORIZED');
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.role !== 'SUPER_ADMIN') {
-    throw new AppError('Forbidden', 403, 'FORBIDDEN');
-  }
-
-  const body = await req.json();
-  const parsed = PlatformFeeSchema.safeParse(body);
-  if (!parsed.success) {
-    throw new ValidationError('Invalid fee data', parsed.error.flatten());
-  }
-
-  return NextResponse.json({ success: true, fee: parsed.data.feePercent });
+export const GET = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") as any;
+  const limit = parseInt(url.searchParams.get("limit") || "50");
+  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const where: any = {};
+  if (status) where.status = status;
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        consultant: {
+          include: { user: { select: { id: true, name: true } } },
+        },
+      },
+      orderBy: { scheduledAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    prisma.booking.count({ where }),
+  ]);
+  return NextResponse.json({ bookings, total });
 });

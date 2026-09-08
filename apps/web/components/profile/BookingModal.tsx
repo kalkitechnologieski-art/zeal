@@ -1,7 +1,9 @@
 "use client";
+
 import { useState } from "react";
 import { X, CreditCard } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
+import { useRouter } from "next/navigation";
 
 interface BookingModalProps {
   healerId: string;
@@ -11,7 +13,8 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ healerId, healerName, perMinuteRate, onClose }: BookingModalProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [duration, setDuration] = useState(15);
@@ -22,6 +25,10 @@ export function BookingModal({ healerId, healerName, perMinuteRate, onClose }: B
   const handlePayment = async () => {
     setIsProcessing(true);
     try {
+      // Use Supabase user fields
+      const customerEmail = user?.email || "";
+      const customerName = user?.user_metadata?.full_name || user?.user_metadata?.username || user?.email?.split("@")[0] || "User";
+
       const response = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,8 +37,8 @@ export function BookingModal({ healerId, healerName, perMinuteRate, onClose }: B
           amount: totalAmount,
           currency: "INR",
           description: `Booking with ${healerName}`,
-          customerEmail: user?.emailAddresses[0]?.emailAddress,
-          customerName: user?.fullName || user?.username,
+          customerEmail,
+          customerName,
         }),
       });
       const data = await response.json();

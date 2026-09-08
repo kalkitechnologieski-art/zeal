@@ -1,31 +1,41 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { CallBilling } from "@/lib/calls/billing";
 import { uploadToR2 } from "@/lib/storage/r2";
 import { NotificationService } from "@/lib/notifications/service";
-import { ws } from "@/lib/socket/server";
+
+// WebSocket fallback for production (Vercel does not support WebSockets)
+let fallbackWs: any;
+try {
+  fallbackWs = require("@/lib/socket/server").ws;
+} catch {
+  fallbackWs = {
+    to: () => ({ emit: () => {} }),
+    emit: () => {},
+  };
+}
 
 export const POST = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const supabase = createServerClientFromCookies();
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const { sessionId, recordingFile, rating, review } = await req.json();
   if (!sessionId) throw new AppError("Session ID required", HTTP_STATUS.BAD_REQUEST);
 
-  const session = await prisma.callSession.findUnique({
+  const callSession = await prisma.callSession.findUnique({
     where: { id: sessionId },
     include: { booking: { include: { consultant: true } } },
   });
-  if (!session) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
+  if (!callSession) throw new AppError("Session not found", HTTP_STATUS.NOT_FOUND);
 
-  // Ensure the booking exists
-  if (!session.booking) {
+  if (!callSession.booking) {
     throw new AppError("Booking not found for this session", HTTP_STATUS.NOT_FOUND);
   }
 
-  if (session.userId !== userId) {
+  if (callSession.userId !== userId) {
     throw new AppError("Not authorized", HTTP_STATUS.FORBIDDEN);
   }
 
@@ -47,29 +57,27 @@ export const POST = withErrorHandler(async (req: Request) => {
       durationSeconds,
       status: "ENDED",
       ...(recordingUrl && { recordingUrl, recordingReady: true }),
-      amount: (durationSeconds / 60) * session.booking.consultant.perMinuteRate,
+      amount: (durationSeconds / 60) * callSession.booking.consultant.perMinuteRate,
     },
   });
 
   await CallBilling.endSession(sessionId);
 
   await prisma.booking.update({
-    where: { id: session.bookingId! },
+    where: { id: callSession.bookingId! },
     data: { status: "CONFIRMED" },
   });
 
   // TODO: Implement rating/review in a separate Review model
   if (rating && rating > 0) {
-    // For now, just log the rating – we'll add a review model later
-    console.log(`Rating for booking ${session.bookingId}: ${rating}, review: ${review}`);
-    // Optionally store in a separate Review table (to be created)
+    console.log(`Rating for booking ${callSession.bookingId}: ${rating}, review: ${review}`);
   }
 
-  // Notify both parties
-  const participants = [session.userId, session.booking.consultant.userId];
+  // Notify both parties via WebSocket (fallback)
+  const participants = [callSession.userId, callSession.booking.consultant.userId];
   participants.forEach((id) => {
     try {
-      ws.to(`user:${id}`).emit("call_ended", {
+      fallbackWs.to(`user:${id}`).emit("call_ended", {
         sessionId,
         durationSeconds,
         recordingUrl,

@@ -1,10 +1,10 @@
+import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { NotificationService } from "@/lib/notifications/service";
 
 export const GET = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const url = new URL(req.url);
@@ -16,7 +16,7 @@ export const GET = withErrorHandler(async (req: Request) => {
 });
 
 export const PUT = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   await NotificationService.markAllAsRead(userId);

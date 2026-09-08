@@ -1,50 +1,56 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/login(.*)",
-  "/register(.*)",
-  "/api/webhooks(.*)",
-  "/api/health(.*)",
-  "/api/ai/horoscope",
-  "/api/ai/tarot",
-  "/api/ai/kundali",
-  "/api/ai/numerology",
-  "/api/ai/palmistry",
-]);
+export default async function proxy(request: NextRequest) {
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
-const isAdminRoute = createRouteMatcher(["/api/admin(.*)"]);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name, options) {
+          response.cookies.set({ name, value: "", ...options });
+        },
+      },
+    }
+  );
 
-export default clerkMiddleware(async (auth, request) => {
-  const { userId, sessionClaims } = await auth();
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (isPublicRoute(request)) {
-    return NextResponse.next();
-  }
+  const isPublicRoute = [
+    "/", "/auth/login", "/auth/register",
+    "/api/webhooks", "/api/health",
+    "/api/ai/horoscope", "/api/ai/tarot", "/api/ai/kundali", "/api/ai/numerology", "/api/ai/palmistry"
+  ].some(path => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + "/"));
 
-  if (!userId) {
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/api/admin");
+
+  if (!isPublicRoute && !session) {
     if (request.nextUrl.pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Unauthorized", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  if (isAdminRoute(request)) {
-    const role = (sessionClaims as any)?.metadata?.role;
+  if (isAdminRoute && session) {
+    const role = session.user?.user_metadata?.role || "USER";
     if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Forbidden", code: "FORBIDDEN" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden", code: "FORBIDDEN" }, { status: 403 });
     }
   }
 
-  return NextResponse.next();
-});
+  return response;
+}
 
 export const config = {
   matcher: [

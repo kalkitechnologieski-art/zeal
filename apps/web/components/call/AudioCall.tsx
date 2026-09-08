@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Phone, PhoneOff, Mic, MicOff, Clock, Loader2 } from "lucide-react";
 import { Button } from "@zeal/ui";
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 
 interface AudioCallProps {
   consultantId: string;
@@ -14,7 +14,7 @@ interface AudioCallProps {
 }
 
 export function AudioCall({ consultantId, healerName, isPaid, perMinuteRate = 0 }: AudioCallProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const router = useRouter();
   const [callActive, setCallActive] = React.useState(false);
   const [duration, setDuration] = React.useState(0);
@@ -46,7 +46,7 @@ export function AudioCall({ consultantId, healerName, isPaid, perMinuteRate = 0 
 
   const handleStartCall = async () => {
     if (!user) {
-      router.push('/login');
+      router.push('/auth/login');
       return;
     }
 
@@ -54,15 +54,9 @@ export function AudioCall({ consultantId, healerName, isPaid, perMinuteRate = 0 
       setIsConnecting(true);
       setError(null);
 
-      // For demo purposes, simulate call connection
-      // In production, this would connect to the real signaling server
-      // and use the EasyCall engine
-
       // Simulate connection delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Create a mock call object (since EasyCall is not fully implemented)
-      // We'll use a simple simulation for now
       const mockCall = {
         isConnected: true,
         endCall: () => {
@@ -95,7 +89,6 @@ export function AudioCall({ consultantId, healerName, isPaid, perMinuteRate = 0 
       setCallActive(false);
       stopTimer();
 
-      // Save call session
       await fetch('/api/calls/end', {
         method: 'POST',
         body: JSON.stringify({

@@ -1,53 +1,31 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
-  const { userId, sessionClaims } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-  const role = (sessionClaims as any)?.metadata?.role;
-  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
-    throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
-  }
-
   const url = new URL(req.url);
-  const status = url.searchParams.get("status") || "all";
+  const status = url.searchParams.get("status") as any;
   const limit = parseInt(url.searchParams.get("limit") || "50");
   const offset = parseInt(url.searchParams.get("offset") || "0");
-
   const where: any = {};
-  if (status === "pending") where.isActive = false;
-  if (status === "active") where.isActive = true;
-
-  const [consultants, total] = await Promise.all([
-    prisma.consultant.findMany({
+  if (status) where.status = status;
+  const [bookings, total] = await Promise.all([
+    prisma.booking.findMany({
       where,
-      include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
-      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        consultant: {
+          include: { user: { select: { id: true, name: true } } },
+        },
+      },
+      orderBy: { scheduledAt: "desc" },
       take: limit,
       skip: offset,
     }),
-    prisma.consultant.count({ where }),
+    prisma.booking.count({ where }),
   ]);
-
-  return NextResponse.json({ consultants, total });
-});
-
-export const PUT = withErrorHandler(async (req: Request) => {
-  const { userId, sessionClaims } = await auth();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-  if ((sessionClaims as any)?.metadata?.role !== "SUPER_ADMIN") {
-    throw new AppError("Forbidden", HTTP_STATUS.FORBIDDEN);
-  }
-
-  const { consultantId, isActive, isVerified } = await req.json();
-  if (!consultantId) throw new AppError("Missing consultantId", HTTP_STATUS.BAD_REQUEST);
-
-  const updated = await prisma.consultant.update({
-    where: { id: consultantId },
-    data: { isActive, isVerified },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
-  return NextResponse.json({ consultant: updated });
+  return NextResponse.json({ bookings, total });
 });

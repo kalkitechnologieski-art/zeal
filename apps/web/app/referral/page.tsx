@@ -1,13 +1,12 @@
 "use client";
-import * as React from "react";
-export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 import { ReferralCard } from "@/components/referral/ReferralCard";
 import { Sparkles } from "lucide-react";
 
 export default function ReferralPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [data, setData] = useState({ referralLink: "", referralCount: 0, sparksEarned: 0 });
   const [loading, setLoading] = useState(true);
 

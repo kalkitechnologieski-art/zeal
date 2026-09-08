@@ -1,5 +1,5 @@
+import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
@@ -7,7 +7,7 @@ export const GET = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   const { id } = await params;
 
@@ -23,7 +23,7 @@ export const PUT = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   const { id } = await params;
 
@@ -47,7 +47,7 @@ export const DELETE = withErrorHandler(async (
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
   const { id } = await params;
 

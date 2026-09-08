@@ -1,10 +1,10 @@
+import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const POST = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const formData = await req.formData();

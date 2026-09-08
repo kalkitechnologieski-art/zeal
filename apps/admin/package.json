@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",
-    "@clerk/nextjs": "^6.0.0",
     "@hookform/resolvers": "5.5.7",
+    "@supabase/auth-helpers-nextjs": "0.15.0",
+    "@supabase/ssr": "0.12.6",
+    "@supabase/supabase-js": "2.115.0",
     "@zeal/types": "^0.0.1",
     "@zeal/ui": "^0.0.1",
     "class-variance-authority": "0.7.1",

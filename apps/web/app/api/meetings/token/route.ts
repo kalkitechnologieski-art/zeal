@@ -1,11 +1,11 @@
+import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@zeal/database";
 import { generateToken } from "@/lib/livekit/room";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const url = new URL(req.url);

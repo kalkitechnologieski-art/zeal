@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Heart, MessageCircle, Share2, UserPlus, AtSign, Filter, ChevronDown } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Avatar, AvatarImage, AvatarFallback } from "@zeal/ui";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 
 interface SparkActivity {
   id: string;
@@ -17,7 +17,7 @@ interface SparkActivity {
 }
 
 export default function SparksPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [activities, setActivities] = useState<SparkActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

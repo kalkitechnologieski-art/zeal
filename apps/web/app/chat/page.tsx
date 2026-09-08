@@ -1,11 +1,10 @@
 "use client";
 
-import * as React from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChatList } from "@/components/chat/ChatList";
 import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 
 // Mock chat data – replace with real API
 const mockChats = [
@@ -35,7 +34,7 @@ const mockChats = [
 
 export default function ChatPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user } = useAuth();
   const { unreadCount } = useRealtimeNotifications(user?.id);
 
   const handleSelect = (chatId: string) => {

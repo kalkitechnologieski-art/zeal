@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 import { AIStartSchema } from "@/lib/validation";
 
 export const POST = withErrorHandler(async (req: Request) => {
-  const { userId } = await auth();
+  const userId = await getUserId();
   if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
 
   const { aiConsultantId } = AIStartSchema.parse(await req.json());
@@ -15,7 +15,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   });
   if (!ai) throw new AppError("AI consultant not found", HTTP_STATUS.NOT_FOUND);
 
-  const session = await prisma.callSession.create({
+  const callSession = await prisma.callSession.create({
     data: {
       userId,
       consultantId: `ai-${aiConsultantId}`,
@@ -28,7 +28,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   });
 
   return NextResponse.json({
-    sessionId: session.id,
+    sessionId: callSession.id,
     rate: ai.perMinuteRate,
   });
 });

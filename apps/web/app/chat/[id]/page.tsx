@@ -1,13 +1,13 @@
 "use client";
 
-import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { useWebSocket } from "@/hooks/useWebSocket";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@zeal/ui";
+import { useState } from "react";
 
 // Mock data – replace with real API
 const mockPartner = {
@@ -26,13 +26,13 @@ const mockMessages = [
 export default function ChatWindowPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useUser();
+  const { user } = useAuth();
   const chatId = params.id;
   const { sendMessage, isConnected } = useWebSocket(user?.id);
 
-  const [messages, setMessages] = React.useState(mockMessages);
-  const [isPerMinuteBilling] = React.useState(true);
-  const [ratePerMinute] = React.useState(50);
+  const [messages, setMessages] = useState(mockMessages);
+  const [isPerMinuteBilling] = useState(true);
+  const [ratePerMinute] = useState(50);
 
   const handleSend = (content: string) => {
     const newMsg = {
@@ -46,7 +46,6 @@ export default function ChatWindowPage() {
   };
 
   const handleCall = (type: "audio" | "video") => {
-    // In production, start a LiveKit call
     alert(`Starting ${type} call with ${mockPartner.name}`);
   };
 

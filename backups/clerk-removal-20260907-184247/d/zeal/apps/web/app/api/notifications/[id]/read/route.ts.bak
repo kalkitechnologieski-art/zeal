@@ -1,0 +1,18 @@
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { NotificationService } from "@/lib/notifications/service";
+
+export const POST = withErrorHandler(async (
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) => {
+  const supabase = createServerClientFromCookies();
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  const { id } = await params;
+
+  await NotificationService.markAsRead(id, userId);
+  return NextResponse.json({ success: true });
+});

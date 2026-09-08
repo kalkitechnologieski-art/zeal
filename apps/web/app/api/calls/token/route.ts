@@ -1,11 +1,11 @@
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const userId = await getUserId();
+  if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

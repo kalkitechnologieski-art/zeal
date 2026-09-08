@@ -5,7 +5,6 @@ export default async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // During build, skip auth checks
   if (!supabaseUrl || !supabaseKey) {
     console.warn("[Proxy] Supabase env vars missing – skipping auth (build mode)");
     return NextResponse.next();
@@ -34,10 +33,25 @@ export default async function proxy(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession();
 
   const isPublicRoute = [
-    "/", "/auth/login", "/auth/register",
-    "/api/webhooks", "/api/health",
-    "/api/ai/horoscope", "/api/ai/tarot", "/api/ai/kundali",
-    "/api/ai/numerology", "/api/ai/palmistry"
+    "/",
+    "/auth/login",
+    "/auth/register",
+    "/api/webhooks",
+    "/api/health",
+    "/api/posts/feed",
+    "/api/ai/horoscope",
+    "/api/ai/tarot",
+    "/api/ai/kundali",
+    "/api/ai/numerology",
+    "/api/ai/palmistry",
+    "/services",
+    "/services/horoscope",
+    "/services/tarot",
+    "/services/kundali",
+    "/services/numerology",
+    "/services/palmistry",
+    "/services/matchmaking",
+    "/ai-astrologers",
   ].some(path => request.nextUrl.pathname === path ||
                     request.nextUrl.pathname.startsWith(path + "/"));
 

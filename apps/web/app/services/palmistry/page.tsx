@@ -1,86 +1,69 @@
-'use client';
-import { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@zeal/ui';
-import { ServiceLayout } from '@/components/services/ServiceLayout';
-import { Loader2, Upload, Camera } from 'lucide-react';
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Button, Input } from "@zeal/ui";
+import { ServiceLayout } from "@/components/services/ServiceLayout";
+import { Loader2, Sparkles } from "lucide-react";
 
 export default function PalmistryPage() {
-  const [image, setImage] = useState<File | null>(null);
-  const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files[0]);
-    }
-  };
+  const [result, setResult] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!image) return;
     setLoading(true);
-    const formData = new FormData();
-    formData.append('image', image);
+    setResult(null);
+    
     try {
-      const res = await fetch('/api/ai/palmistry', {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      setAnalysis(data.analysis);
-    } catch {
-      setAnalysis({ error: 'Failed to analyze palm' });
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      setResult("✨ Your palmistry reading is ready! This feature is coming soon with AI integration.");
+    } catch (error) {
+      setResult("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ServiceLayout title="Palmistry" icon="🖐️" description="Upload a photo of your palm for AI analysis.">
+    <ServiceLayout 
+      title="Palmistry" 
+      icon="🖐️" 
+      description="AI palm reading"
+    >
       <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-        <div
-          className="border-2 border-dashed border-[#E1C5E7]/50 dark:border-gray-700/50 rounded-xl p-8 text-center cursor-pointer hover:border-[#9D7DC5] transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {image ? (
-            <img src={URL.createObjectURL(image)} alt="Palm" className="max-h-48 mx-auto rounded-lg" />
-          ) : (
-            <div className="flex flex-col items-center">
-              <Upload className="w-12 h-12 text-[#B8A1D9]" />
-              <p className="text-[#B8A1D9] dark:text-gray-400 mt-2">Tap to upload palm photo</p>
-            </div>
-          )}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="hidden"
+        <div>
+          <label className="block text-sm font-medium text-[#5E4B8B] dark:text-white mb-1">
+            Your Name
+          </label>
+          <Input 
+            type="text" 
+            placeholder="Enter your name" 
+            className="glass border-[#E1C5E7]/30 dark:border-gray-700/30"
+            required
           />
         </div>
-        <Button type="submit" variant="primary" className="w-full btn-luxury" disabled={!image || loading}>
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Analyzing...</> : 'Analyze Palm'}
+        
+        <Button 
+          type="submit" 
+          variant="primary" 
+          className="w-full btn-luxury" 
+          disabled={loading}
+        >
+          {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading...</> : 'Get Palmistry'}
         </Button>
       </form>
-      {analysis && (
+      
+      {result && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-6 p-4 rounded-xl glass border border-[#E1C5E7]/30 dark:border-gray-700/30"
+          className="mt-6 p-6 rounded-xl glass border border-[#E1C5E7]/30 dark:border-gray-700/30"
         >
-          <h3 className="font-semibold text-[#5E4B8B] dark:text-white">Palm Analysis</h3>
-          {analysis.error ? (
-            <p className="text-red-500">{analysis.error}</p>
-          ) : (
-            <div className="space-y-1 mt-2">
-              <p className="text-sm"><span className="font-medium">Life Line:</span> {analysis.lifeLine}</p>
-              <p className="text-sm"><span className="font-medium">Heart Line:</span> {analysis.heartLine}</p>
-              <p className="text-sm"><span className="font-medium">Head Line:</span> {analysis.headLine}</p>
-              <p className="text-sm"><span className="font-medium">Fate Line:</span> {analysis.fateLine}</p>
-            </div>
-          )}
+          <h3 className="font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#FFD700]" /> Your Palmistry
+          </h3>
+          <p className="text-[#5E4B8B] dark:text-white mt-2 leading-relaxed">{result}</p>
         </motion.div>
       )}
     </ServiceLayout>

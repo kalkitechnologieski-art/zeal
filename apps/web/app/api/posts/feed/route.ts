@@ -1,17 +1,17 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
+  // Allow unauthenticated users to see public posts
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-
+  
   const url = new URL(req.url);
   const cursor = url.searchParams.get("cursor") || undefined;
   const limit = parseInt(url.searchParams.get("limit") || "10");
 
-  // For MVP, show all posts; later we can filter by followed users.
+  // For MVP, show all posts to everyone
   const posts = await prisma.post.findMany({
     include: {
       author: {

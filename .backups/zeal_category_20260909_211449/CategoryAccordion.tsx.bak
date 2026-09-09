@@ -7,7 +7,6 @@ import {
   MessageCircle, Award, Smile, Coffee, Book, Music, Camera, Home, Trees,
   Mountain, Waves, Rainbow, Infinity, Droplet, Wind, Sun, Globe
 } from "lucide-react";
-import { ServiceCard } from "./ServiceCard";
 
 const CATEGORIES = [
   { id: "astrology", icon: Sparkles, name: "Astrology & Divination", description: "Vedic, Western, Chinese – birth charts, horoscopes, compatibility.", services: ["Vedic Astrology", "Western Astrology", "Birth Chart/Kundli", "Compatibility", "Horoscopes"], count: 12 },
@@ -50,13 +49,6 @@ const CATEGORIES = [
   { id: "massage", icon: Sparkles, name: "Massage Therapy", description: "Therapeutic massage for relaxation and healing.", services: ["Swedish Massage", "Deep Tissue", "Hot Stone", "Myofascial Release"], count: 4 },
 ];
 
-// Map category IDs to service routes (we'll assume the route is /services/[service-id])
-// For this demo, we'll generate a route from the service name.
-const getServiceRoute = (categoryId: string, serviceName: string) => {
-  const slug = serviceName.toLowerCase().replace(/ /g, "-");
-  return `/services/${slug}`;
-};
-
 export function CategoryAccordion() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,135 +72,29 @@ export function CategoryAccordion() {
         {filtered.map((category) => {
           const isExpanded = expandedId === category.id;
           const Icon = category.icon;
-
           return (
-            <div
-              key={category.id}
-              className="glass-card-3d overflow-hidden transition-all duration-300 hover:shadow-lg"
-            >
-              {/* ── Header ── */}
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : category.id)}
-                className="w-full p-4 flex items-center gap-4 text-left transition-colors hover:bg-white/5"
-              >
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#9D7DC5]/20 to-[#533AFD]/10 flex-shrink-0">
-                  <Icon className="w-5 h-5 text-[#9D7DC5]" />
-                </div>
+            <div key={category.id} className="glass-card-3d overflow-hidden transition-all duration-300 hover:shadow-lg">
+              <button onClick={() => setExpandedId(isExpanded ? null : category.id)} className="w-full p-4 flex items-center gap-4 text-left">
+                <div className="p-2 rounded-full bg-[#9D7DC5]/10"><Icon className="w-5 h-5 text-[#9D7DC5]" /></div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-[#5E4B8B] dark:text-white">
-                      {category.name}
-                    </h3>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#9D7DC5]/10 text-[#9D7DC5]">
-                      {category.count} services
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#B8A1D9] truncate">
-                    {category.description}
-                  </p>
+                  <h3 className="font-semibold text-[#5E4B8B] dark:text-white">{category.name}</h3>
+                  <p className="text-sm text-[#B8A1D9] truncate">{category.description}</p>
                 </div>
-                <div className="flex-shrink-0">
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-[#B8A1D9]" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-[#B8A1D9]" />
-                  )}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[#B8A1D9] bg-white/10 px-2 py-0.5 rounded-full">{category.count} services</span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-[#B8A1D9]" /> : <ChevronDown className="w-4 h-4 text-[#B8A1D9]" />}
                 </div>
               </button>
-
-              {/* ── Expanded Content ── */}
-              <AnimatePresence initial={false}>
+              <AnimatePresence>
                 {isExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{
-                      height: "auto",
-                      opacity: 1,
-                      transition: {
-                        height: { type: "spring", stiffness: 120, damping: 18 },
-                        opacity: { duration: 0.3, ease: "easeOut" },
-                      },
-                    }}
-                    exit={{
-                      height: 0,
-                      opacity: 0,
-                      transition: {
-                        height: { type: "spring", stiffness: 120, damping: 18 },
-                        opacity: { duration: 0.2, ease: "easeIn" },
-                      },
-                    }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4 pt-2 border-t border-[#E1C5E7]/30">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {category.services.map((serviceName, idx) => {
-                          // Map service name to icon (simplified – use emoji or first letter)
-                          // For a real implementation, you'd have an icon map.
-                          const iconEmoji = serviceName.includes("Astrology") ? "🌟" :
-                                            serviceName.includes("Tarot") ? "🔮" :
-                                            serviceName.includes("Numerology") ? "🔢" :
-                                            serviceName.includes("Palmistry") ? "🖐️" :
-                                            serviceName.includes("Psychic") ? "👁️" :
-                                            serviceName.includes("Mediumship") ? "👻" :
-                                            serviceName.includes("Dream") ? "💭" :
-                                            serviceName.includes("Angel") ? "👼" :
-                                            serviceName.includes("Aura") ? "🌈" :
-                                            serviceName.includes("Cartomancy") ? "🃏" :
-                                            serviceName.includes("Past Life") ? "🔄" :
-                                            serviceName.includes("Shadow") ? "🌑" :
-                                            serviceName.includes("Therapy") ? "🧠" :
-                                            serviceName.includes("Psychiatry") ? "💊" :
-                                            serviceName.includes("Coaching") ? "🎯" :
-                                            serviceName.includes("Wellness") ? "🌿" :
-                                            serviceName.includes("Energy") ? "⚡" :
-                                            serviceName.includes("Reiki") ? "🤲" :
-                                            serviceName.includes("Advice") ? "💼" :
-                                            serviceName.includes("Commerce") ? "🛒" :
-                                            serviceName.includes("Sound") ? "🎵" :
-                                            serviceName.includes("Yoga") ? "🧘" :
-                                            serviceName.includes("Meditation") ? "🧘" :
-                                            serviceName.includes("Hypnotherapy") ? "💤" :
-                                            serviceName.includes("Feng Shui") ? "🏠" :
-                                            serviceName.includes("Pet") ? "🐾" :
-                                            serviceName.includes("Oracle") ? "🔮" :
-                                            serviceName.includes("Face") ? "😊" :
-                                            serviceName.includes("Business") ? "📈" :
-                                            serviceName.includes("Health") ? "🍎" :
-                                            serviceName.includes("Relationship") ? "💕" :
-                                            serviceName.includes("Spiritual") ? "✨" :
-                                            serviceName.includes("Functional") ? "🧬" :
-                                            serviceName.includes("Tantra") ? "🌀" :
-                                            serviceName.includes("Aromatherapy") ? "🌹" :
-                                            serviceName.includes("Naturopathy") ? "🌱" :
-                                            serviceName.includes("Acupuncture") ? "📌" :
-                                            serviceName.includes("Chiropractic") ? "💪" :
-                                            serviceName.includes("Massage") ? "💆" : "✨";
-
-                          // Create a short description based on service name
-                          const desc = `Expert ${serviceName} guidance`;
-
-                          return (
-                            <ServiceCard
-                              key={`${category.id}-${serviceName}`}
-                              id={`${category.id}-${serviceName}`}
-                              name={serviceName}
-                              icon={iconEmoji}
-                              description={desc}
-                              route={getServiceRoute(category.id, serviceName)}
-                              index={idx}
-                            />
-                          );
-                        })}
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
+                    <div className="px-4 pb-4 pt-1 border-t border-[#E1C5E7]/30">
+                      <div className="flex flex-wrap gap-2">
+                        {category.services.map((service) => (
+                          <span key={service} className="text-xs px-3 py-1.5 rounded-full glass border border-[#E1C5E7]/20 hover:bg-white/10 transition-colors">{service}</span>
+                        ))}
                       </div>
-                      {/* Optional: View All button */}
-                      <div className="mt-4 text-center">
-                        <button
-                          onClick={() => window.location.href = `/explore?category=${category.id}`}
-                          className="text-sm text-[#9D7DC5] hover:underline flex items-center justify-center gap-1 mx-auto"
-                        >
-                          View all {category.name} services →
-                        </button>
-                      </div>
+                      <button onClick={() => window.location.href = `/explore?category=${category.id}`} className="mt-3 text-sm text-[#9D7DC5] hover:underline flex items-center gap-1">Explore {category.name} →</button>
                     </div>
                   </motion.div>
                 )}
@@ -220,5 +106,3 @@ export function CategoryAccordion() {
     </div>
   );
 }
-
-// ZEAL_CATEGORY_ENHANCED

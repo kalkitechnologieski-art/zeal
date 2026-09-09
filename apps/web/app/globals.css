@@ -403,3 +403,30 @@
 
 
 /* HOMEPAGE_RELAX_APPLIED */
+
+/* ─── Service Card Enhancements ─────────────────────────────────────────────── */
+.service-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease;
+}
+.service-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(83, 58, 253, 0.08);
+}
+
+/* ─── Relaxing Stagger Animation ───────────────────────────────────────────── */
+@keyframes fadeUpSlow {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.service-card-stagger {
+  opacity: 0;
+  animation: fadeUpSlow 0.6s ease-out forwards;
+}
+.service-card-stagger:nth-child(1) { animation-delay: 0.04s; }
+.service-card-stagger:nth-child(2) { animation-delay: 0.08s; }
+.service-card-stagger:nth-child(3) { animation-delay: 0.12s; }
+.service-card-stagger:nth-child(4) { animation-delay: 0.16s; }
+.service-card-stagger:nth-child(5) { animation-delay: 0.20s; }
+.service-card-stagger:nth-child(6) { animation-delay: 0.24s; }
+

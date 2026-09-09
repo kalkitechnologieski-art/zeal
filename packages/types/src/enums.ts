@@ -2,7 +2,7 @@ export const Role = {
   USER: "USER",
   HEALER: "HEALER",
   ADMIN: "ADMIN",
-  SUPER_ADMIN: "SUPER_ADMIN"
+  SUPER_ADMIN: "SUPER_ADMIN",
 } as const;
 export type Role = typeof Role[keyof typeof Role];
 
@@ -18,7 +18,7 @@ export const ConsultantCategory = {
   HEALER: "healer",
   MOTIVATIONAL_SPEAKER: "motivational_speaker",
   SPIRITUAL_GUIDE: "spiritual_guide",
-  YOGA_INSTRUCTOR: "yoga_instructor"
+  YOGA_INSTRUCTOR: "yoga_instructor",
 } as const;
 export type ConsultantCategory = typeof ConsultantCategory[keyof typeof ConsultantCategory];
 
@@ -29,6 +29,6 @@ export const Faith = {
   BUDDHIST: "BUDDHIST",
   JEWISH: "JEWISH",
   SIKH: "SIKH",
-  OTHER: "OTHER"
+  OTHER: "OTHER",
 } as const;
 export type Faith = typeof Faith[keyof typeof Faith];

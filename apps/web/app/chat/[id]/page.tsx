@@ -34,7 +34,7 @@ export default function ChatWindowPage() {
   const [isPerMinuteBilling] = useState(true);
   const [ratePerMinute] = useState(50);
 
-  const handleSend = (content: string) => {
+  const handleSend = async (content: string) => {
     const newMsg = {
       id: `m${Date.now()}`,
       senderId: "me",
@@ -81,3 +81,5 @@ export default function ChatWindowPage() {
     </motion.div>
   );
 }
+
+// BATCH3_FIX_APPLIED

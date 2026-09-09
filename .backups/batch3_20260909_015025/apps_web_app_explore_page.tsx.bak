@@ -1,0 +1,426 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { Search, Sparkles, ChevronRight, Star, Users, MapPin, Briefcase } from "lucide-react";
+import { Button, Input } from "@zeal/ui";
+import { ConsultantCategory, ConsultantProfile, Faith } from "@zeal/types";
+
+// ─── 2 astrologers per category ──────────────────────────────────────────────
+const mockConsultants: Record<string, ConsultantProfile[]> = {
+  [ConsultantCategory.ASTROLOGER]: [
+    {
+      id: "a1", name: "Rajesh Sharma", username: "raj_astrologer",
+      avatar: "https://ui-avatars.com/api/?name=Rajesh+Sharma&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 50, rating: 4.9, experience: 12,
+      category: ConsultantCategory.ASTROLOGER, userId: "u1", isVerified: true,
+      totalConsultations: 1200, sparks: 25000, languages: ["Hindi","English"],
+      specialties: ["Vedic", "KP"], faith: Faith.HINDU,
+      bio: "Vedic Astrologer with 12+ years experience",
+    },
+    {
+      id: "a2", name: "Priya Patel", username: "priya_jyotish",
+      avatar: "https://ui-avatars.com/api/?name=Priya+Patel&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 75, rating: 4.8, experience: 8,
+      category: ConsultantCategory.ASTROLOGER, userId: "u2", isVerified: true,
+      totalConsultations: 800, sparks: 18000, languages: ["Hindi","English"],
+      specialties: ["Vedic", "Nadi"], faith: Faith.HINDU,
+      bio: "Nadi astrology specialist",
+    },
+  ],
+  [ConsultantCategory.PSYCHOLOGIST]: [
+    {
+      id: "p1", name: "Dr. Meera Nair", username: "dr_meera",
+      avatar: "https://ui-avatars.com/api/?name=Meera+Nair&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 80, rating: 4.7, experience: 10,
+      category: ConsultantCategory.PSYCHOLOGIST, userId: "u3", isVerified: true,
+      totalConsultations: 600, sparks: 15000, languages: ["English"],
+      specialties: ["CBT", "Anxiety"], faith: Faith.OTHER,
+      bio: "Licensed psychologist specializing in anxiety",
+    },
+    {
+      id: "p2", name: "Dr. Arjun Gupta", username: "dr_arjun",
+      avatar: "https://ui-avatars.com/api/?name=Arjun+Gupta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 95, rating: 4.6, experience: 15,
+      category: ConsultantCategory.PSYCHOLOGIST, userId: "u5", isVerified: true,
+      totalConsultations: 900, sparks: 20000, languages: ["Hindi","English"],
+      specialties: ["Trauma", "Mindfulness"], faith: Faith.HINDU,
+      bio: "Trauma specialist with 15 years experience",
+    },
+  ],
+  [ConsultantCategory.TAROT]: [
+    {
+      id: "t1", name: "Sana Khan", username: "sana_tarot",
+      avatar: "https://ui-avatars.com/api/?name=Sana+Khan&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 60, rating: 4.8, experience: 6,
+      category: ConsultantCategory.TAROT, userId: "u4", isVerified: true,
+      totalConsultations: 400, sparks: 10000, languages: ["Hindi","English"],
+      specialties: ["Rider-Waite", "Lenormand"], faith: Faith.ISLAM,
+      bio: "Professional tarot reader",
+    },
+    {
+      id: "t2", name: "Rahul Das", username: "rahul_tarot",
+      avatar: "https://ui-avatars.com/api/?name=Rahul+Das&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 55, rating: 4.7, experience: 5,
+      category: ConsultantCategory.TAROT, userId: "u6", isVerified: false,
+      totalConsultations: 300, sparks: 8000, languages: ["Hindi","English"],
+      specialties: ["Osho Zen", "Angel Cards"], faith: Faith.HINDU,
+      bio: "Spiritual tarot reader",
+    },
+  ],
+  [ConsultantCategory.HEALER]: [
+    {
+      id: "h1", name: "Ananya Gupta", username: "ananya_healer",
+      avatar: "https://ui-avatars.com/api/?name=Ananya+Gupta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 70, rating: 4.9, experience: 8,
+      category: ConsultantCategory.HEALER, userId: "u7", isVerified: true,
+      totalConsultations: 500, sparks: 12000, languages: ["Hindi","English"],
+      specialties: ["Reiki", "Pranic"], faith: Faith.HINDU,
+      bio: "Energy healer and Reiki master",
+    },
+    {
+      id: "h2", name: "Manoj Kumar", username: "manoj_healer",
+      avatar: "https://ui-avatars.com/api/?name=Manoj+Kumar&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 65, rating: 4.8, experience: 6,
+      category: ConsultantCategory.HEALER, userId: "u8", isVerified: true,
+      totalConsultations: 350, sparks: 9000, languages: ["Hindi","English"],
+      specialties: ["Crystal", "Sound"], faith: Faith.OTHER,
+      bio: "Crystal and sound healer",
+    },
+  ],
+  [ConsultantCategory.LIFE_COACH]: [
+    {
+      id: "l1", name: "Coach Priyanka", username: "coach_priyanka",
+      avatar: "https://ui-avatars.com/api/?name=Priyanka+Sharma&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 85, rating: 4.9, experience: 10,
+      category: ConsultantCategory.LIFE_COACH, userId: "u9", isVerified: true,
+      totalConsultations: 700, sparks: 16000, languages: ["Hindi","English"],
+      specialties: ["Career", "Relationships"], faith: Faith.HINDU,
+      bio: "Certified life coach specializing in career growth",
+    },
+    {
+      id: "l2", name: "Coach Aditi", username: "coach_aditi",
+      avatar: "https://ui-avatars.com/api/?name=Aditi+Rao&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 90, rating: 4.7, experience: 12,
+      category: ConsultantCategory.LIFE_COACH, userId: "u10", isVerified: true,
+      totalConsultations: 800, sparks: 18000, languages: ["English"],
+      specialties: ["Health", "Finance"], faith: Faith.OTHER,
+      bio: "Holistic life coach for health and finance",
+    },
+  ],
+  [ConsultantCategory.NUMEROLOGIST]: [
+    {
+      id: "n1", name: "Numerologist Divya", username: "divya_num",
+      avatar: "https://ui-avatars.com/api/?name=Divya+Sharma&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 50, rating: 4.8, experience: 7,
+      category: ConsultantCategory.NUMEROLOGIST, userId: "u11", isVerified: true,
+      totalConsultations: 450, sparks: 11000, languages: ["Hindi","English"],
+      specialties: ["Chaldean", "Pythagorean"], faith: Faith.HINDU,
+      bio: "Expert numerologist decoding life paths",
+    },
+    {
+      id: "n2", name: "Raj Kumar", username: "raj_num",
+      avatar: "https://ui-avatars.com/api/?name=Raj+Kumar&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 55, rating: 4.6, experience: 5,
+      category: ConsultantCategory.NUMEROLOGIST, userId: "u12", isVerified: false,
+      totalConsultations: 300, sparks: 7000, languages: ["Hindi","English"],
+      specialties: ["Kabbalah", "Indian"], faith: Faith.HINDU,
+      bio: "Destiny mapping specialist",
+    },
+  ],
+  [ConsultantCategory.PALMIST]: [
+    {
+      id: "palm1", name: "Palmist Riya", username: "riya_palm",
+      avatar: "https://ui-avatars.com/api/?name=Riya+Mehta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 60, rating: 4.7, experience: 6,
+      category: ConsultantCategory.PALMIST, userId: "u13", isVerified: true,
+      totalConsultations: 400, sparks: 10000, languages: ["Hindi","English"],
+      specialties: ["Classical", "Modern"], faith: Faith.HINDU,
+      bio: "Classical palmist with modern insights",
+    },
+    {
+      id: "palm2", name: "Dr. Shilpa Mehta", username: "shilpa_palm",
+      avatar: "https://ui-avatars.com/api/?name=Shilpa+Mehta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 70, rating: 4.8, experience: 8,
+      category: ConsultantCategory.PALMIST, userId: "u14", isVerified: true,
+      totalConsultations: 500, sparks: 12000, languages: ["Hindi","English"],
+      specialties: ["Psychological", "Modern"], faith: Faith.OTHER,
+      bio: "Holistic palmist integrating psychology",
+    },
+  ],
+  [ConsultantCategory.VASTU]: [
+    {
+      id: "v1", name: "Vastu Expert Lata", username: "lata_vastu",
+      avatar: "https://ui-avatars.com/api/?name=Lata+Sharma&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 65, rating: 4.8, experience: 10,
+      category: ConsultantCategory.VASTU, userId: "u15", isVerified: true,
+      totalConsultations: 600, sparks: 14000, languages: ["Hindi","English"],
+      specialties: ["Vastu Shastra", "Feng Shui"], faith: Faith.HINDU,
+      bio: "Vastu Shastra expert",
+    },
+    {
+      id: "v2", name: "Dr. Neha Gupta", username: "neha_vastu",
+      avatar: "https://ui-avatars.com/api/?name=Neha+Gupta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 75, rating: 4.9, experience: 12,
+      category: ConsultantCategory.VASTU, userId: "u16", isVerified: true,
+      totalConsultations: 700, sparks: 16000, languages: ["English"],
+      specialties: ["Feng Shui", "Vastu Shastra"], faith: Faith.HINDU,
+      bio: "Feng Shui and Vastu specialist",
+    },
+  ],
+  [ConsultantCategory.REIKI]: [
+    {
+      id: "r1", name: "Reiki Master Anjali", username: "anjali_reiki",
+      avatar: "https://ui-avatars.com/api/?name=Anjali+Singh&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 60, rating: 4.9, experience: 8,
+      category: ConsultantCategory.REIKI, userId: "u17", isVerified: true,
+      totalConsultations: 500, sparks: 12000, languages: ["Hindi","English"],
+      specialties: ["Reiki", "Pranic"], faith: Faith.HINDU,
+      bio: "Usui Reiki master",
+    },
+    {
+      id: "r2", name: "Reiki Healer Pooja", username: "pooja_reiki",
+      avatar: "https://ui-avatars.com/api/?name=Pooja+Gupta&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 65, rating: 4.7, experience: 6,
+      category: ConsultantCategory.REIKI, userId: "u18", isVerified: true,
+      totalConsultations: 350, sparks: 8000, languages: ["English"],
+      specialties: ["Crystal", "Sound"], faith: Faith.OTHER,
+      bio: "Crystal and sound healer",
+    },
+  ],
+  [ConsultantCategory.MOTIVATIONAL_SPEAKER]: [
+    {
+      id: "m1", name: "Speaker Neha", username: "neha_speaker",
+      avatar: "https://ui-avatars.com/api/?name=Neha+Singh&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 80, rating: 4.8, experience: 10,
+      category: ConsultantCategory.MOTIVATIONAL_SPEAKER, userId: "u19",
+      isVerified: true, totalConsultations: 600, sparks: 15000,
+      languages: ["Hindi","English"], specialties: ["Inspiration","Leadership"],
+      faith: Faith.HINDU, bio: "Dynamic motivational speaker",
+    },
+    {
+      id: "m2", name: "Speaker Ritu", username: "ritu_speaker",
+      avatar: "https://ui-avatars.com/api/?name=Ritu+Rao&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 90, rating: 4.9, experience: 12,
+      category: ConsultantCategory.MOTIVATIONAL_SPEAKER, userId: "u20",
+      isVerified: true, totalConsultations: 700, sparks: 16000,
+      languages: ["English"], specialties: ["Mindfulness","Resilience"],
+      faith: Faith.OTHER, bio: "Resilience and mindfulness coach",
+    },
+  ],
+  [ConsultantCategory.SPIRITUAL_GUIDE]: [
+    {
+      id: "s1", name: "Guide Tara", username: "tara_guide",
+      avatar: "https://ui-avatars.com/api/?name=Tara+Sharma&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 70, rating: 4.8, experience: 10,
+      category: ConsultantCategory.SPIRITUAL_GUIDE, userId: "u21",
+      isVerified: true, totalConsultations: 500, sparks: 12000,
+      languages: ["Hindi","English"], specialties: ["Meditation","Mindfulness"],
+      faith: Faith.HINDU, bio: "Meditation and spiritual guide",
+    },
+    {
+      id: "s2", name: "Guide Radhika", username: "radhika_guide",
+      avatar: "https://ui-avatars.com/api/?name=Radhika+Iyer&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 75, rating: 4.9, experience: 12,
+      category: ConsultantCategory.SPIRITUAL_GUIDE, userId: "u22",
+      isVerified: true, totalConsultations: 600, sparks: 14000,
+      languages: ["English"], specialties: ["Spiritual Counseling","Inner Peace"],
+      faith: Faith.HINDU, bio: "Spiritual counselor for inner peace",
+    },
+  ],
+  [ConsultantCategory.YOGA_INSTRUCTOR]: [
+    {
+      id: "y1", name: "Yoga Guru Anjali", username: "anjali_yoga",
+      avatar: "https://ui-avatars.com/api/?name=Anjali+Kapoor&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 60, rating: 4.8, experience: 8,
+      category: ConsultantCategory.YOGA_INSTRUCTOR, userId: "u23",
+      isVerified: true, totalConsultations: 400, sparks: 10000,
+      languages: ["Hindi","English"], specialties: ["Hatha","Vinyasa"],
+      faith: Faith.HINDU, bio: "Hatha and Vinyasa yoga instructor",
+    },
+    {
+      id: "y2", name: "Yoga Instructor Simran", username: "simran_yoga",
+      avatar: "https://ui-avatars.com/api/?name=Simran+Singh&background=9D7DC5&color=fff",
+      isOnline: true, perMinuteRate: 65, rating: 4.7, experience: 6,
+      category: ConsultantCategory.YOGA_INSTRUCTOR, userId: "u24",
+      isVerified: true, totalConsultations: 300, sparks: 8000,
+      languages: ["English"], specialties: ["Kundalini","Meditation"],
+      faith: Faith.SIKH, bio: "Kundalini yoga and meditation teacher",
+    },
+  ],
+};
+
+const categoryDisplay: Record<string, { label: string; icon: string }> = {
+  [ConsultantCategory.ASTROLOGER]: { label: "Astrologers", icon: "⭐" },
+  [ConsultantCategory.PSYCHOLOGIST]: { label: "Psychologists", icon: "🧠" },
+  [ConsultantCategory.TAROT]: { label: "Tarot Readers", icon: "🔮" },
+  [ConsultantCategory.HEALER]: { label: "Healers", icon: "✨" },
+  [ConsultantCategory.LIFE_COACH]: { label: "Life Coaches", icon: "🎯" },
+  [ConsultantCategory.NUMEROLOGIST]: { label: "Numerologists", icon: "🔢" },
+  [ConsultantCategory.PALMIST]: { label: "Palmists", icon: "🖐️" },
+  [ConsultantCategory.VASTU]: { label: "Vastu Experts", icon: "🏠" },
+  [ConsultantCategory.REIKI]: { label: "Reiki Masters", icon: "🤲" },
+  [ConsultantCategory.MOTIVATIONAL_SPEAKER]: { label: "Motivational Speakers", icon: "🎤" },
+  [ConsultantCategory.SPIRITUAL_GUIDE]: { label: "Spiritual Guides", icon: "🕊️" },
+  [ConsultantCategory.YOGA_INSTRUCTOR]: { label: "Yoga Instructors", icon: "🧘" },
+};
+
+export default function ExplorePage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const filteredConsultants = useMemo(() => {
+    let all = Object.values(mockConsultants).flat();
+    if (selectedCategory) {
+      all = all.filter((c) => c.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      all = all.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.username.toLowerCase().includes(q) ||
+          c.specialties.some((s) => s.toLowerCase().includes(q)) ||
+          c.bio?.toLowerCase().includes(q)
+      );
+    }
+    return all;
+  }, [selectedCategory, searchQuery]);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <h1 className="text-2xl md:text-3xl font-bold text-[#5E4B8B] dark:text-white mb-2">
+        Explore Trusted Consultants
+      </h1>
+      <p className="text-[#B8A1D9] dark:text-gray-400 mb-6">
+        Find the perfect guide for your journey across all faiths and specialties.
+      </p>
+
+      {/* Search Bar */}
+      <div className="relative max-w-2xl mb-8">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#B8A1D9]" />
+        <Input
+          type="text"
+          placeholder="Search by name, specialty, or keyword..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-12 w-full glass border-[#E1C5E7]/30 dark:border-gray-700/30 rounded-2xl py-3 text-[#5E4B8B] dark:text-white placeholder:text-[#B8A1D9] focus:ring-2 focus:ring-[#9D7DC5]/50"
+        />
+      </div>
+
+      {/* Category Pills */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            selectedCategory === null
+              ? "bg-[#9D7DC5] text-white shadow-md"
+              : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white hover:bg-[#E1C5E7] dark:hover:bg-gray-700"
+          }`}
+        >
+          All
+        </button>
+        {Object.entries(categoryDisplay).map(([key, { label, icon }]) => (
+          <button
+            key={key}
+            onClick={() => setSelectedCategory(key)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1 ${
+              selectedCategory === key
+                ? "bg-[#9D7DC5] text-white shadow-md"
+                : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white hover:bg-[#E1C5E7] dark:hover:bg-gray-700"
+            }`}
+          >
+            <span>{icon}</span> {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Results */}
+      {filteredConsultants.length === 0 ? (
+        <div className="text-center py-12 text-[#B8A1D9] dark:text-gray-400">
+          No consultants found. Try adjusting your search.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+          {filteredConsultants.map((c) => {
+            const display = categoryDisplay[c.category] || { label: c.category, icon: "🔹" };
+            return (
+              <motion.div
+                key={c.id}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                className="glass-card-3d overflow-hidden hover:shadow-xl transition-all"
+              >
+                <Link href={`/consultant/${c.id}`} className="block">
+                  <div className="p-4 text-center">
+                    <div className="relative inline-block">
+                      <img
+                        src={c.avatar}
+                        alt={c.name}
+                        className="w-20 h-20 rounded-full object-cover ring-2 ring-[#9D7DC5]/20"
+                      />
+                      {c.isOnline && (
+                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-900" />
+                      )}
+                      {c.isVerified && (
+                        <span className="absolute -top-1 -right-1 bg-[#9D7DC5] rounded-full p-0.5 shadow-lg">
+                          <span className="text-white text-[8px]">✓</span>
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-2 font-semibold text-[#5E4B8B] dark:text-white text-sm">{c.name}</h3>
+                    <p className="text-xs text-[#B8A1D9] dark:text-gray-400">@{c.username}</p>
+                    <div className="flex items-center justify-center gap-1 mt-1 text-xs text-[#B8A1D9] dark:text-gray-400">
+                      <span className="flex items-center gap-0.5">
+                        <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                        {c.rating}
+                      </span>
+                      <span className="w-px h-3 bg-[#E1C5E7]" />
+                      <span>₹{c.perMinuteRate}/min</span>
+                      <span className="w-px h-3 bg-[#E1C5E7]" />
+                      <span>{c.totalConsultations} consults</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1 mt-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white border border-[#E1C5E7] dark:border-gray-700">
+                        {display.icon} {display.label}
+                      </span>
+                      {c.specialties.slice(0, 1).map((s) => (
+                        <span
+                          key={s}
+                          className="text-xs px-2 py-0.5 rounded-full bg-[#9D7DC5]/10 text-[#9D7DC5] border border-[#9D7DC5]/20"
+                        >
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                      <span className="text-xs text-[#B8A1D9] dark:text-gray-400 flex items-center gap-1">
+                        <Users className="w-3 h-3" /> {c.totalConsultations}
+                      </span>
+                      <span className="text-xs text-[#B8A1D9] dark:text-gray-400 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {c.languages.join(", ")}
+                      </span>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="mt-3 w-full text-xs py-1.5"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = `/consultant/${c.id}`;
+                      }}
+                    >
+                      View Profile <ChevronRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+export const dynamic = "force-dynamic";

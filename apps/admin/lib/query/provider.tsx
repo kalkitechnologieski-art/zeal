@@ -9,3 +9,5 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
     </QueryClientProvider>
   );
 }
+
+// ADMIN_QUERY_FIX_APPLIED

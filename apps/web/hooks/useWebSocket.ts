@@ -34,3 +34,5 @@ export function useWebSocket(userId: string | undefined) {
 
   return { isConnected, sendMessage, subscribe };
 }
+
+// BATCH3_APPLIED

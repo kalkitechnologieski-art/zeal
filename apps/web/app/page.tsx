@@ -1,112 +1,103 @@
 "use client";
 
-import * as React from "react";
-import Link from "next/link";
 import { motion } from "framer-motion";
-import { ConsultantCategory, ConsultantProfile } from "@zeal/types";
-import { HeroSlider } from "@/components/home/HeroSlider";
-import { ServiceCard } from "@/components/home/ServiceCard";
-import { CategorySection } from "@/components/home/CategorySection";
-
-const slides = [
-  {
-    id: "s1",
-    title: "Find Your Path to Wellness",
-    subtitle: "Connect with trusted healers, astrologers, and wellness experts.",
-    ctaText: "Explore Now",
-    ctaLink: "/explore",
-    videoUrl: "/videos/hero1.mp4",
-    posterUrl: "/videos/hero1-poster.jpg",
-  },
-  {
-    id: "s2",
-    title: "AI Astrologers Available 24/7",
-    subtitle: "Get instant guidance from our AI-powered astrologers.",
-    ctaText: "Try AI Astrologer",
-    ctaLink: "/services?filter=ai",
-    videoUrl: "/videos/hero2.mp4",
-    posterUrl: "/videos/hero2-poster.jpg",
-  },
-  {
-    id: "s3",
-    title: "Book a Consultation Today",
-    subtitle: "Speak with verified experts in astrology, psychology, tarot, and more.",
-    ctaText: "Book Now",
-    ctaLink: "/explore",
-    videoUrl: "/videos/hero3.mp4",
-    posterUrl: "/videos/hero3-poster.jpg",
-  },
-];
-
-const freeServices = [
-  { id: "horoscope", name: "Daily Horoscope", icon: "🌟", description: "AI-powered daily predictions", isFree: true, route: "/horoscope", isAIPowered: true },
-  { id: "tarot", name: "Tarot Reading", icon: "🔮", description: "3-card spread with AI", isFree: true, route: "/tarot", isAIPowered: true },
-  { id: "kundali", name: "Kundali", icon: "🪐", description: "Instant birth chart", isFree: true, route: "/kundali", isAIPowered: true },
-  { id: "matchmaking", name: "Match Making", icon: "💕", description: "AI compatibility check", isFree: true, route: "/matchmaking", isAIPowered: true },
-  { id: "palmistry", name: "Palmistry", icon: "🖐️", description: "AI palm reading", isFree: true, route: "/palmistry", isAIPowered: true },
-  { id: "numerology", name: "Numerology", icon: "🔢", description: "Life path analysis", isFree: true, route: "/numerology", isAIPowered: true },
-];
-
-const mockConsultants = {
-  [ConsultantCategory.ASTROLOGER]: [
-    { id: "a1", name: "Rajesh Sharma", username: "raj_astrologer", avatar: "https://ui-avatars.com/api/?name=Rajesh+Sharma&background=9D7DC5&color=fff", isOnline: true, perMinuteRate: 50, rating: 4.9, experience: 12, category: ConsultantCategory.ASTROLOGER, userId: "u1", isVerified: true, totalConsultations: 1200, sparks: 25000, languages: ["Hindi", "English"], specialties: ["Vedic", "KP"], faith: "HINDU", bio: "Vedic Astrologer with 12+ years experience" },
-    { id: "a2", name: "Priya Patel", username: "priya_jyotish", avatar: "https://ui-avatars.com/api/?name=Priya+Patel&background=9D7DC5&color=fff", isOnline: true, perMinuteRate: 75, rating: 4.8, experience: 8, category: ConsultantCategory.ASTROLOGER, userId: "u2", isVerified: true, totalConsultations: 800, sparks: 18000, languages: ["Hindi", "English"], specialties: ["Vedic", "Nadi"], faith: "HINDU", bio: "Nadi astrology specialist" },
-  ],
-  [ConsultantCategory.PSYCHOLOGIST]: [
-    { id: "p1", name: "Dr. Meera Nair", username: "dr_meera", avatar: "https://ui-avatars.com/api/?name=Meera+Nair&background=9D7DC5&color=fff", isOnline: true, perMinuteRate: 80, rating: 4.7, experience: 10, category: ConsultantCategory.PSYCHOLOGIST, userId: "u3", isVerified: true, totalConsultations: 600, sparks: 15000, languages: ["English"], specialties: ["CBT", "Anxiety"], faith: "OTHER", bio: "Licensed psychologist specializing in anxiety" },
-  ],
-  [ConsultantCategory.TAROT]: [
-    { id: "t1", name: "Sana Khan", username: "sana_tarot", avatar: "https://ui-avatars.com/api/?name=Sana+Khan&background=9D7DC5&color=fff", isOnline: true, perMinuteRate: 60, rating: 4.8, experience: 6, category: ConsultantCategory.TAROT, userId: "u4", isVerified: true, totalConsultations: 400, sparks: 10000, languages: ["Hindi", "English"], specialties: ["Rider-Waite", "Lenormand"], faith: "ISLAM", bio: "Professional tarot reader" },
-  ],
-};
-
-const categories = [
-  { id: ConsultantCategory.ASTROLOGER, title: "Top Astrologers", icon: "⭐" },
-  { id: ConsultantCategory.PSYCHOLOGIST, title: "Psychologists", icon: "🧠" },
-  { id: ConsultantCategory.TAROT, title: "Tarot Readers", icon: "🔮" },
-  { id: ConsultantCategory.HEALER, title: "Healers", icon: "✨" },
-  { id: ConsultantCategory.LIFE_COACH, title: "Life Coaches", icon: "🎯" },
-];
+import Link from "next/link";
+import { Sparkles, ArrowRight, Star, Users, Zap, Brain, Calendar, MessageCircle, Phone } from "lucide-react";
+import { Button } from "@zeal/ui";
 
 export default function HomePage() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-8">
-      <HeroSlider slides={slides} />
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-[#5E4B8B] dark:text-white">✨ Free AI Services</h2>
-          <Link href="/services?filter=free" className="text-sm text-[#9D7DC5] hover:underline">View All</Link>
+    <div className="max-w-7xl mx-auto px-4 py-10 md:py-16">
+      {/* Hero */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center max-w-3xl mx-auto"
+      >
+        <div className="inline-flex items-center gap-2 bg-[#9D7DC5]/20 text-[#9D7DC5] px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+          <Sparkles className="w-4 h-4" /> AI-Powered Wellness
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {freeServices.map((service) => (
-            <ServiceCard key={service.id} {...service} />
-          ))}
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#5E4B8B] dark:text-white leading-tight">
+          Connect with Trusted Healers
+          <span className="block text-[#9D7DC5]">Across All Faiths</span>
+        </h1>
+        <p className="mt-4 text-lg text-[#B8A1D9] dark:text-gray-400 max-w-2xl mx-auto">
+          Find astrologers, psychologists, tarot readers, and healers – all verified and available for chat, audio, or video.
+        </p>
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link href="/explore">
+            <Button variant="primary" className="btn-luxury px-8 py-3 text-base">
+              Explore Consultants <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+          <Link href="/auth/login">
+            <Button variant="secondary" className="glass border-white/20 text-[#5E4B8B] dark:text-white hover:bg-white/10 px-8 py-3 text-base">
+              Sign In
+            </Button>
+          </Link>
         </div>
-      </section>
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-[#5E4B8B] dark:text-white">🌟 All Services</h2>
-          <Link href="/services" className="text-sm text-[#9D7DC5] hover:underline">View All</Link>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {freeServices.map((service) => (
-            <ServiceCard key={service.id} {...service} />
-          ))}
-        </div>
-      </section>
-      {categories.map((cat) => {
-        const consultants = mockConsultants[cat.id as keyof typeof mockConsultants] || [];
-        if (consultants.length === 0) return null;
-        return (
-          <CategorySection
-            key={cat.id}
-            title={cat.title}
-            icon={cat.icon}
-            consultants={consultants}
-            viewAllLink={`/explore?category=${cat.id}`}
-          />
-        );
-      })}
+      </motion.div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12 max-w-2xl mx-auto">
+        {[
+          { icon: Star, label: "4.9 Avg Rating", value: "⭐ 4.9" },
+          { icon: Users, label: "24+ Consultants", value: "24+ Experts" },
+          { icon: Zap, label: "AI Assistants", value: "24/7 AI" },
+          { icon: Brain, label: "Services", value: "12 Categories" },
+        ].map((stat, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="glass-card-3d p-4 text-center"
+          >
+            <stat.icon className="w-6 h-6 mx-auto text-[#9D7DC5] mb-1" />
+            <p className="text-lg font-bold text-[#5E4B8B] dark:text-white">{stat.value}</p>
+            <p className="text-xs text-[#B8A1D9] dark:text-gray-400">{stat.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Features */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16">
+        {[
+          { icon: Calendar, title: "Easy Booking", desc: "Schedule consultations in minutes with real-time availability." },
+          { icon: MessageCircle, title: "Chat & Calls", desc: "Connect via chat, audio, or video – per-minute billing." },
+          { icon: Phone, title: "24/7 AI Help", desc: "Get instant answers from AI astrologers anytime, day or night." },
+        ].map((feature, idx) => (
+          <motion.div
+            key={idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + idx * 0.1 }}
+            className="glass-card-3d p-6 text-center"
+          >
+            <feature.icon className="w-8 h-8 mx-auto text-[#9D7DC5] mb-3" />
+            <h3 className="text-lg font-semibold text-[#5E4B8B] dark:text-white">{feature.title}</h3>
+            <p className="text-sm text-[#B8A1D9] dark:text-gray-400 mt-1">{feature.desc}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mt-16 text-center"
+      >
+        <Link href="/auth/register">
+          <Button variant="primary" className="btn-luxury px-10 py-4 text-lg">
+            Get Started – It's Free <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+        </Link>
+        <p className="mt-3 text-sm text-[#B8A1D9] dark:text-gray-400">
+          Already have an account? <Link href="/auth/login" className="text-[#9D7DC5] hover:underline">Sign in</Link>
+        </p>
+      </motion.div>
     </div>
   );
 }

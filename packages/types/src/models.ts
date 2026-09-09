@@ -1,8 +1,10 @@
+import type { ConsultantCategory, Faith } from "./enums";
+
 export interface User {
   id: string;
   email: string;
   name?: string;
-  role: "USER" | "HEALER" | "ADMIN";
+  role: "USER" | "HEALER" | "ADMIN" | "SUPER_ADMIN";
   sparks: number;
   createdAt: Date;
   updatedAt: Date;
@@ -15,7 +17,7 @@ export interface ConsultantProfile {
   username: string;
   bio: string;
   avatar: string;
-  category: "astrologer" | "psychologist" | "tarot" | "numerologist" | "palmist" | "vastu" | "reiki" | "life_coach" | "healer";
+  category: ConsultantCategory;
   isVerified: boolean;
   isOnline: boolean;
   perMinuteRate: number;
@@ -25,9 +27,9 @@ export interface ConsultantProfile {
   sparks: number;
   languages: string[];
   specialties: string[];
-  faith: "HINDU" | "ISLAM" | "CHRISTIAN" | "BUDDHIST" | "JEWISH" | "SIKH" | "OTHER";
-  isAI?: boolean;    // Added for AI consultants
-  isPaid?: boolean;  // Added for AI consultants
+  faith: Faith;
+  isAI?: boolean;
+  isPaid?: boolean;
 }
 
 export interface Post {

@@ -1,43 +1,54 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { getUserId } from "@/lib/auth";
+import { prisma, withTransaction } from "@zeal/database";
+import { withErrorHandler, AppError, ErrorCode, InsufficientBalanceError } from "@/lib/errors";
 import { Ledger } from "@/lib/wallet/ledger";
 import { generateMeetingLink } from "@/lib/livekit/room";
 import { NotificationService } from "@/lib/notifications/service";
 import { BookingCreateSchema } from "@/lib/validation";
+import { redis } from "@/lib/cache";
 
 export const POST = withErrorHandler(async (req: Request) => {
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
 
   const body = await req.json();
-  const { consultantId, scheduledAt, durationMinutes, externalEmail } =
-    BookingCreateSchema.parse(body);
+  const { consultantId, scheduledAt, durationMinutes, externalEmail } = BookingCreateSchema.parse(body);
 
   const consultant = await prisma.consultant.findUnique({
     where: { id: consultantId },
     include: { user: true },
   });
-  if (!consultant) throw new AppError("Consultant not found", HTTP_STATUS.NOT_FOUND);
+  if (!consultant) throw new AppError("Consultant not found", 404, ErrorCode.NOT_FOUND);
   if (!consultant.isActive) {
-    throw new AppError("Consultant is not active", HTTP_STATUS.BAD_REQUEST);
+    throw new AppError("Consultant is not active", 400, ErrorCode.BOOKING_CONFLICT);
   }
 
+  // Get platform fee from cache/redis
+  let platformFeePercent = 10;
+  try {
+    const fee = await redis.get("platform_fee_percent");
+    if (fee) platformFeePercent = parseFloat(String(fee));
+  } catch (_) {}
+
   const amount = (durationMinutes / 60) * consultant.perMinuteRate;
-  const platformFee = amount * 0.10;
+  const platformFee = amount * (platformFeePercent / 100);
   const consultantEarning = amount - platformFee;
 
   let wallet = null;
   if (!externalEmail) {
     wallet = await prisma.wallet.findUnique({ where: { userId } });
-    if (!wallet) throw new AppError("Wallet not found", HTTP_STATUS.NOT_FOUND);
+    if (!wallet) {
+      throw new AppError("Wallet not found", 404, ErrorCode.WALLET_NOT_FOUND);
+    }
     if (wallet.balance < amount) {
-      throw new AppError("Insufficient balance", HTTP_STATUS.BAD_REQUEST);
+      throw new InsufficientBalanceError(amount, wallet.balance);
     }
   }
 
-  const booking = await prisma.$transaction(async (tx) => {
+  // Create booking and charge wallet in transaction
+  const booking = await withTransaction(async (tx) => {
+    // Deduct wallet if logged in
     if (wallet && !externalEmail) {
       await Ledger.createTransaction({
         walletId: wallet.id,
@@ -57,7 +68,7 @@ export const POST = withErrorHandler(async (req: Request) => {
         amount,
         platformFee,
         consultantEarning,
-        externalEmail,
+        externalEmail: externalEmail || null,
         status: externalEmail ? "PENDING" : "CONFIRMED",
         meetingLink: externalEmail ? null : await generateMeetingLink(`booking-${Date.now()}`),
       },
@@ -66,6 +77,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     return newBooking;
   });
 
+  // Notify consultant
   await NotificationService.createNotification({
     userId: consultant.userId,
     type: "booking",
@@ -79,12 +91,12 @@ export const POST = withErrorHandler(async (req: Request) => {
 
 export const GET = withErrorHandler(async (req: Request) => {
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status") as any;
-  const limit = parseInt(url.searchParams.get("limit") || "50");
-  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const limit = parseInt(url.searchParams.get("limit") || "20");
+  const page = parseInt(url.searchParams.get("page") || "1");
 
   const where: any = { userId };
   if (status) where.status = status;
@@ -94,11 +106,16 @@ export const GET = withErrorHandler(async (req: Request) => {
       where,
       include: { consultant: { include: { user: true } } },
       orderBy: { scheduledAt: "desc" },
+      skip: (page - 1) * limit,
       take: limit,
-      skip: offset,
     }),
     prisma.booking.count({ where }),
   ]);
 
-  return NextResponse.json({ bookings, total });
+  return NextResponse.json({
+    items: bookings,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+  });
 });
+
+// BATCH2_FIX_APPLIED

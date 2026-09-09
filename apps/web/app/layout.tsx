@@ -36,7 +36,7 @@ export default function RootLayout({
             <SupabaseAuthProvider>
               <div className="flex flex-col min-h-screen min-h-dvh">
                 <TopBar />
-                <main className="flex-1 overflow-y-auto pb-14 md:pb-20">
+                <main className="flex-1 overflow-y-auto pt-16 pb-16">
                   {children}
                 </main>
                 <BottomNav />
@@ -49,3 +49,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+// BATCH1_APPLIED

@@ -76,7 +76,6 @@ export default async function proxy(request: NextRequest) {
   // ─── ADMIN ROUTES (require admin role) ──────────────────────────────────────
   const isAdminRoute = path.startsWith("/admin") || path.startsWith("/api/admin");
 
-  // ─── AUTH CHECK ──────────────────────────────────────────────────────────────
   if (isPublicRoute) return response;
 
   if (isPrivateRoute && !session) {

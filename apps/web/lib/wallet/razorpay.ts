@@ -1,27 +1,20 @@
-import { AppError } from '@/lib/errors';
+import Razorpay from 'razorpay';
+import { AppError, HTTP_STATUS, ErrorCode } from '@/lib/errors';
 
-let razorpayInstance: any = null;
+const keyId = process.env.RAZORPAY_KEY_ID;
+const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-function getRazorpay() {
-  if (!razorpayInstance) {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) {
-      throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment');
-    }
-    try {
-      const Razorpay = require('razorpay');
-      razorpayInstance = new Razorpay({ key_id: keyId, key_secret: keySecret });
-    } catch (err) {
-      throw new Error('Failed to load Razorpay: ' + (err as Error).message);
-    }
-  }
-  return razorpayInstance;
+if (!keyId || !keySecret) {
+  throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set');
 }
 
+export const razorpay = new Razorpay({
+  key_id: keyId,
+  key_secret: keySecret,
+});
+
 export async function createOrder(amount: number, currency = 'INR', receipt?: string) {
-  if (amount <= 0) throw new AppError('Amount must be positive', 400, 'INVALID_AMOUNT');
-  const razorpay = getRazorpay();
+  if (amount <= 0) throw new AppError('Amount must be positive', 400, ErrorCode.INVALID_AMOUNT);
   return razorpay.orders.create({
     amount: Math.round(amount * 100),
     currency,
@@ -29,7 +22,4 @@ export async function createOrder(amount: number, currency = 'INR', receipt?: st
   });
 }
 
-// Export a function to get the instance for webhook verification (if needed)
-export function getRazorpayInstance() {
-  return getRazorpay();
-}
+// BATCH1_APPLIED

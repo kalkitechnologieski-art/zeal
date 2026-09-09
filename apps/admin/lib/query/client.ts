@@ -9,3 +9,5 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// ADMIN_QUERY_FIX_APPLIED

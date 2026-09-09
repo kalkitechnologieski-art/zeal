@@ -1,5 +1,17 @@
 import { prisma } from "@zeal/database";
 
+// WebSocket stub – will be replaced with real socket.io later
+const ws = {
+  to: (room: string) => ({
+    emit: (event: string, data: any) => {
+      console.log(`[WS Stub] Emitting to ${room}: ${event}`, data);
+    },
+  }),
+  emit: (event: string, data: any) => {
+    console.log(`[WS Stub] Emitting globally: ${event}`, data);
+  },
+};
+
 export class NotificationService {
   static async createNotification(data: {
     userId: string;
@@ -13,11 +25,15 @@ export class NotificationService {
         userId: data.userId,
         type: data.type,
         message: data.message,
-        redirectUrl: data.redirectUrl,
+        redirectUrl: data.redirectUrl || null,
         actorId: data.actorId,
         read: false,
       },
     });
+
+    // Emit real-time event to user's room
+    ws.to(`notif:${data.userId}`).emit("notification", notif);
+
     return notif;
   }
 
@@ -56,3 +72,5 @@ export class NotificationService {
     return { items, total, unreadCount };
   }
 }
+
+// BATCH2_FIX_APPLIED

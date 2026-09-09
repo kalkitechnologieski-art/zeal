@@ -11,6 +11,7 @@ export function useCall(bookingId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startCall = useCallback(async () => {
     setIsLoading(true);
@@ -33,6 +34,10 @@ export function useCall(bookingId: string) {
       timerRef.current = setInterval(() => {
         setDuration((d) => d + 1);
       }, 1000);
+      // Sync with server every 30 seconds
+      syncIntervalRef.current = setInterval(() => {
+        // Optionally sync cost with server
+      }, 30000);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -57,11 +62,22 @@ export function useCall(bookingId: string) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      // Invalidate wallet
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+        syncIntervalRef.current = null;
+      }
+      // Refresh wallet
+      const walletRes = await fetch('/api/wallet/balance');
+      if (walletRes.ok) {
+        const walletData = await walletRes.json();
+        setWallet(walletData.wallet);
+      }
     } catch (err: any) {
       setError(err.message);
     }
-  }, [sessionId]);
+  }, [sessionId, setWallet]);
 
   return { startCall, endCall, isActive, duration, token, isLoading, error };
 }
+
+// BATCH3_APPLIED

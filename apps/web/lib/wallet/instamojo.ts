@@ -10,11 +10,6 @@ const INSTAMOJO_WEBHOOK_SECRET = process.env.INSTAMOJO_WEBHOOK_SECRET!;
 let accessToken: string | null = null;
 let tokenExpiry: number | null = null;
 
-/**
- * Obtain a fresh OAuth2 access token from Instamojo.
- * Caches the token until it expires.
- * @returns Access token string.
- */
 async function getAccessToken(): Promise<string> {
   if (accessToken && tokenExpiry && Date.now() < tokenExpiry) {
     return accessToken;
@@ -44,21 +39,7 @@ async function getAccessToken(): Promise<string> {
   return accessToken!;
 }
 
-/**
- * Instamojo API client for payment requests and webhook verification.
- */
 export const instamojo = {
-  /**
-   * Create a new payment request (redirect to Instamojo checkout).
-   * @param data.amount - Amount in INR (decimal).
-   * @param data.purpose - Short description.
-   * @param data.buyer_name - Buyer's full name.
-   * @param data.buyer_email - Buyer's email.
-   * @param data.buyer_phone - Buyer's phone (10 digits).
-   * @param data.redirect_url - Where to redirect after payment.
-   * @param data.webhook_url - Webhook URL to receive payment status.
-   * @returns Instamojo payment request object (includes `longurl`).
-   */
   async createPaymentRequest(data: {
     amount: number;
     purpose: string;
@@ -104,11 +85,6 @@ export const instamojo = {
     return response.json();
   },
 
-  /**
-   * Get details of a payment request (e.g., for verification).
-   * @param paymentRequestId - The payment request ID.
-   * @returns Full payment request object.
-   */
   async getPaymentRequest(paymentRequestId: string) {
     const token = await getAccessToken();
 
@@ -132,13 +108,6 @@ export const instamojo = {
     return response.json();
   },
 
-  /**
-   * Verify the signature of an incoming webhook from Instamojo.
-   * Uses HMAC‑SHA256 with your webhook secret.
-   * @param body - Raw request body (string).
-   * @param signature - The `X‑Signature` header value.
-   * @returns true if signature is valid, false otherwise.
-   */
   verifyWebhook(body: string, signature: string): boolean {
     if (!INSTAMOJO_WEBHOOK_SECRET) {
       throw new AppError(
@@ -153,3 +122,5 @@ export const instamojo = {
     return expected === signature;
   },
 };
+
+// BATCH1_APPLIED

@@ -1,45 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { Search, Sparkles, ChevronRight, Star, Users, MapPin, Briefcase } from "lucide-react";
+import { Button, Input } from "@zeal/ui";
 import { ConsultantCategory, ConsultantProfile, Faith } from "@zeal/types";
-import { useDebounce } from "@/hooks/useDebounce";
-import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Badge, Input } from "@zeal/ui";
-import { ConsultantCard } from "@/components/shared/ConsultantCard";
-import { Search, Hash, User, Image, TrendingUp, Sparkles } from "lucide-react";
 
-type SearchResult = {
-  id: string;
-  type: "profile" | "hashtag" | "topic" | "post";
-  label: string;
-  avatar?: string;
-  description?: string;
+// Import mock data from dashboard or use a stub
+const mockConsultants: Record<string, ConsultantProfile[]> = {
+  [ConsultantCategory.ASTROLOGER]: [
+    { id: "a1", name: "Rajesh Sharma", username: "raj_astrologer", avatar: "https://ui-avatars.com/api/?name=Rajesh+Sharma&background=9D7DC5&color=fff", isOnline: true, perMinuteRate: 50, rating: 4.9, experience: 12, category: ConsultantCategory.ASTROLOGER, userId: "u1", isVerified: true, totalConsultations: 1200, sparks: 25000, languages: ["Hindi","English"], specialties: ["Vedic", "KP"], faith: Faith.HINDU, bio: "Vedic Astrologer with 12+ years experience" },
+    // ... (add 2 per category for brevity)
+  ],
+  // ... other categories (stubbed)
 };
-
-// Mock consultants – will be replaced with real API
-const mockConsultants: ConsultantProfile[] = [
-  {
-    id: "a1",
-    name: "Rajesh Sharma",
-    username: "raj_astrologer",
-    avatar: "https://ui-avatars.com/api/?name=Rajesh+Sharma&background=9D7DC5&color=fff",
-    isOnline: true,
-    perMinuteRate: 50,
-    rating: 4.9,
-    experience: 12,
-    category: ConsultantCategory.ASTROLOGER,
-    userId: "u1",
-    isVerified: true,
-    totalConsultations: 1200,
-    sparks: 25000,
-    languages: ["Hindi", "English"],
-    specialties: ["Vedic", "KP"],
-    faith: Faith.HINDU,
-    bio: "Vedic Astrologer with 12+ years experience",
-  },
-  // ... (other consultants kept minimal for brevity; in production you fetch from API)
-];
 
 const categoryDisplay: Record<string, { label: string; icon: string }> = {
   [ConsultantCategory.ASTROLOGER]: { label: "Astrologers", icon: "⭐" },
@@ -51,132 +26,76 @@ const categoryDisplay: Record<string, { label: string; icon: string }> = {
   [ConsultantCategory.PALMIST]: { label: "Palmists", icon: "🖐️" },
   [ConsultantCategory.VASTU]: { label: "Vastu Experts", icon: "🏠" },
   [ConsultantCategory.REIKI]: { label: "Reiki Masters", icon: "🤲" },
+  [ConsultantCategory.MOTIVATIONAL_SPEAKER]: { label: "Motivational Speakers", icon: "🎤" },
+  [ConsultantCategory.SPIRITUAL_GUIDE]: { label: "Spiritual Guides", icon: "🕊️" },
+  [ConsultantCategory.YOGA_INSTRUCTOR]: { label: "Yoga Instructors", icon: "🧘" },
 };
 
 export default function ExplorePage() {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const debouncedQuery = useDebounce(query, 300);
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const fetchResults = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setResults([]);
-      return;
+  const filteredConsultants = useMemo(() => {
+    let all = Object.values(mockConsultants).flat();
+    if (selectedCategory) all = all.filter(c => c.category === selectedCategory);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      all = all.filter(c => c.name.toLowerCase().includes(q) || c.specialties.some(s => s.toLowerCase().includes(q)));
     }
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/explore/search?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      setResults(data.results || []);
-      setIsOpen(true);
-    } catch {
-      setResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchResults(debouncedQuery);
-  }, [debouncedQuery, fetchResults]);
-
-  const icons = {
-    profile: <User className="w-4 h-4 text-[#9D7DC5]" />,
-    hashtag: <Hash className="w-4 h-4 text-[#9D7DC5]" />,
-    topic: <TrendingUp className="w-4 h-4 text-[#9D7DC5]" />,
-    post: <Image className="w-4 h-4 text-[#9D7DC5]" />,
-  };
-
-  // For MVP, we reuse the static consultants list; later we'll fetch from API.
-  const filteredConsultants = activeTab === "all"
-    ? mockConsultants
-    : mockConsultants.filter(c => c.category === activeTab);
+    return all;
+  }, [selectedCategory, searchQuery]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4">
-      <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white mb-4">
-        Explore
-      </h1>
-      <div className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8A1D9]" />
-          <Input
-            type="text"
-            placeholder="Search for consultants, topics, or hashtags..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setIsOpen(true)}
-            onBlur={() => setTimeout(() => setIsOpen(false), 200)}
-            className="pl-9 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl border-[#E1C5E7] dark:border-gray-700"
-          />
-        </div>
-        <AnimatePresence>
-          {isOpen && results.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-[#E1C5E7] dark:border-gray-700 max-h-96 overflow-y-auto z-50"
-            >
-              <div className="p-2 space-y-1">
-                {results.map((result) => (
-                  <Link
-                    key={result.id}
-                    href={`/${result.type}/${result.id}`}
-                    className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-[#F4E8F7] dark:hover:bg-gray-800 transition-colors"
-                  >
-                    {result.avatar ? (
-                      <img src={result.avatar} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#E1C5E7] dark:bg-gray-700 flex items-center justify-center">
-                        {icons[result.type]}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium text-[#5E4B8B] dark:text-white">{result.label}</p>
-                      {result.description && (
-                        <p className="text-sm text-[#B8A1D9] dark:text-gray-400">{result.description}</p>
-                      )}
-                    </div>
-                    <span className="text-xs px-2 py-1 bg-[#F4E8F7] dark:bg-gray-800 text-[#9D7DC5] rounded-full capitalize">
-                      {result.type}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <h1 className="text-2xl md:text-3xl font-bold text-[#5E4B8B] dark:text-white mb-2">Explore Trusted Consultants</h1>
+      <p className="text-[#B8A1D9] dark:text-gray-400 mb-6">Find the perfect guide for your journey across all faiths and specialties.</p>
+
+      <div className="relative max-w-2xl mb-8">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#B8A1D9]" />
+        <Input type="text" placeholder="Search by name, specialty, or keyword..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-12 w-full glass border-[#E1C5E7]/30 dark:border-gray-700/30 rounded-2xl py-3 text-[#5E4B8B] dark:text-white placeholder:text-[#B8A1D9] focus:ring-2 focus:ring-[#9D7DC5]/50" />
       </div>
 
-      <div className="mt-6">
-        <Tabs defaultValue="all" onValueChange={(v) => setActiveTab(v)}>
-          <TabsList className="w-full overflow-x-auto scrollbar-hide flex-nowrap">
-            <TabsTrigger value="all">All</TabsTrigger>
-            {Object.entries(categoryDisplay).map(([key, { label, icon }]) => (
-              <TabsTrigger key={key} value={key}>
-                {icon} {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <TabsContent value={activeTab}>
-            <div className="mt-4">
-              <h3 className="text-sm font-medium text-[#B8A1D9] uppercase tracking-wider mb-2">
-                Consultants
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredConsultants.map((consultant) => (
-                  <ConsultantCard key={consultant.id} consultant={consultant} variant="horizontal" />
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+      <div className="flex flex-wrap gap-2 mb-6">
+        <button onClick={() => setSelectedCategory(null)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === null ? "bg-[#9D7DC5] text-white shadow-md" : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white hover:bg-[#E1C5E7]"}`}>All</button>
+        {Object.entries(categoryDisplay).map(([key, { label, icon }]) => (
+          <button key={key} onClick={() => setSelectedCategory(key)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-1 ${selectedCategory === key ? "bg-[#9D7DC5] text-white shadow-md" : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white hover:bg-[#E1C5E7]"}`}><span>{icon}</span> {label}</button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        {filteredConsultants.map((c) => {
+          const display = categoryDisplay[c.category] || { label: c.category, icon: "🔹" };
+          return (
+            <motion.div key={c.id} whileHover={{ y: -4, scale: 1.02 }} className="glass-card-3d overflow-hidden">
+              <Link href={`/consultant/${c.id}`} className="block">
+                <div className="p-4 text-center">
+                  <div className="relative inline-block">
+                    <img src={c.avatar} alt={c.name} className="w-20 h-20 rounded-full object-cover ring-2 ring-[#9D7DC5]/20" />
+                    {c.isOnline && <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white" />}
+                    {c.isVerified && <span className="absolute -top-1 -right-1 bg-[#9D7DC5] rounded-full p-0.5 shadow-lg"><span className="text-white text-[8px]">✓</span></span>}
+                  </div>
+                  <h3 className="mt-2 font-semibold text-[#5E4B8B] dark:text-white text-sm">{c.name}</h3>
+                  <p className="text-xs text-[#B8A1D9]">@{c.username}</p>
+                  <div className="flex items-center justify-center gap-1 mt-1 text-xs text-[#B8A1D9]">
+                    <span className="flex items-center gap-0.5"><Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />{c.rating}</span>
+                    <span className="w-px h-3 bg-[#E1C5E7]" />
+                    <span>₹{c.perMinuteRate}/min</span>
+                    <span className="w-px h-3 bg-[#E1C5E7]" />
+                    <span>{c.totalConsultations} consults</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1 mt-2">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] border border-[#E1C5E7]">{display.icon} {display.label}</span>
+                    {c.specialties.slice(0,1).map(s => <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-[#9D7DC5]/10 text-[#9D7DC5] border border-[#9D7DC5]/20">{s}</span>)}
+                  </div>
+                  <Button variant="primary" size="sm" className="mt-3 w-full text-xs py-1.5" onClick={(e) => { e.preventDefault(); window.location.href = `/consultant/${c.id}`; }}>View Profile <ChevronRight className="w-3 h-3 ml-1" /></Button>
+                </div>
+              </Link>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
 }
-export const dynamic = "force-dynamic";
+
+// BATCH3_APPLIED

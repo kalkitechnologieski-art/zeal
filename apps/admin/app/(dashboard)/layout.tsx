@@ -1,42 +1,28 @@
-'use client';
-import { useUser } from '@clerk/nextjs';
-import { AdminSidebar } from '@/components/layout/AdminSidebar';
-import { AdminTopBar } from '@/components/layout/AdminTopBar';
-import { useAdminSocket } from '@/hooks/useAdminSocket';
-import { IncomingAlertOverlay } from '@/components/alerts/IncomingAlertOverlay';
-import { useEffect } from 'react';
-import { useAdminStore } from '@/lib/store/adminStore';
+"use client";
+
+import { usePathname } from "next/navigation";
+import { AdminSidebar } from "@/components/layout/AdminSidebar";
+import { AdminTopBar } from "@/components/layout/AdminTopBar";
+import { useAuth } from "@/components/providers/SupabaseAuthProvider";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AdminDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoaded } = useUser();
-  const { setProfile, setSocketConnected } = useAdminStore();
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // Connect to WebSocket for real‑time alerts
-  useAdminSocket();
-
-  // Sync Clerk user with admin store
   useEffect(() => {
-    if (isLoaded && user) {
-      // In production, fetch role from database
-      // For now, use email or metadata to determine role
-      const email = user.emailAddresses?.[0]?.emailAddress || '';
-      const isSuperAdmin = email === 'admin@zeal.com' || user.publicMetadata?.role === 'super_admin';
-      setProfile({
-        id: user.id,
-        email,
-        name: user.fullName || user.username || 'Admin',
-        avatar: user.imageUrl,
-        role: isSuperAdmin ? 'super_admin' : 'client_admin',
-        createdAt: new Date().toISOString(),
-      });
+    if (!isLoading && !user) {
+      router.push("/login");
     }
-  }, [user, isLoaded, setProfile]);
+  }, [user, isLoading, router]);
 
-  if (!isLoaded) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="flex items-center gap-2">
@@ -48,6 +34,10 @@ export default function AdminDashboardLayout({
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="flex h-screen bg-[#F4E8F7] dark:bg-gray-900 overflow-hidden">
       <AdminSidebar />
@@ -55,7 +45,6 @@ export default function AdminDashboardLayout({
         <AdminTopBar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
-      <IncomingAlertOverlay />
     </div>
   );
 }

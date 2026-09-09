@@ -1,6 +1,6 @@
 import { Ledger } from '@/lib/wallet/ledger';
 import { prisma } from '@zeal/database';
-import { AppError } from '@/lib/errors';
+import { AppError, ErrorCode } from '@/lib/errors';
 
 export class CallBilling {
   static async startBilling(sessionId: string, ratePerMinute: number) {
@@ -12,8 +12,8 @@ export class CallBilling {
       where: { id: sessionId },
       include: { booking: true },
     });
-    if (!session) throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
-    if (!session.booking) throw new AppError('Booking not found', 404, 'BOOKING_NOT_FOUND');
+    if (!session) throw new AppError('Session not found', 404, ErrorCode.SESSION_NOT_FOUND);
+    if (!session.booking) throw new AppError('Booking not found', 404, ErrorCode.BOOKING_NOT_FOUND);
 
     await Ledger.createTransaction({
       walletId: session.booking.userId!,
@@ -35,3 +35,5 @@ export class CallBilling {
     return session;
   }
 }
+
+// BATCH1_APPLIED

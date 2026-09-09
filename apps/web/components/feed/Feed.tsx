@@ -13,7 +13,6 @@ export function Feed() {
   const socket = useSocket();
   const { addNotification } = useAppStore();
 
-  // Real-time new post
   useEffect(() => {
     if (!socket) return;
     const handleNewPost = (newPost: any) => {
@@ -25,7 +24,6 @@ export function Feed() {
         redirectUrl: '/dashboard',
         read: false,
         actorId: newPost.author?.id || 'system',
-        createdAt: new Date().toISOString(),
       });
     };
     socket.on('feed:new_post', handleNewPost);
@@ -75,3 +73,5 @@ export function Feed() {
     </div>
   );
 }
+
+// BATCH1_APPLIED

@@ -39,3 +39,5 @@ export async function generateToken(roomName: string, participantIdentity: strin
   at.addGrant({ roomJoin: true, room: roomName });
   return at.toJwt();
 }
+
+// BATCH2_APPLIED

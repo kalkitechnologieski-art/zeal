@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { prisma, withTransaction } from "@zeal/database";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
 import { z } from "zod";
 
 const SyncUserSchema = z.object({
@@ -15,78 +15,36 @@ export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const { id, email, name, avatar, username: providedUsername } = SyncUserSchema.parse(body);
 
-  // Generate a username if not provided or empty
-  let username: string;
-  if (providedUsername && providedUsername.trim().length > 0) {
-    username = providedUsername.trim();
-  } else {
-    // Derive from email (remove domain, special characters)
-    const base = email.split("@")[0] || "user";
-    username = base.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    // If empty after cleaning, use a default
-    if (!username) username = "user";
-  }
-
-  // Ensure uniqueness
-  let candidate = username;
+  // Generate unique username
+  let base = providedUsername?.trim() || email.split("@")[0] || "user";
+  base = base.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "user";
+  let candidate = base;
   let suffix = 0;
-  while (true) {
-    const existing = await prisma.user.findUnique({
-      where: { username: candidate },
-      select: { id: true },
-    });
-    if (!existing) break;
+  while (await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } })) {
     suffix++;
-    candidate = `${username}${suffix}`;
+    candidate = `${base}${suffix}`;
   }
 
-  const user = await prisma.user.upsert({
-    where: { id },
-    update: {
-      email,
-      name: name || undefined,
-      avatar: avatar || undefined,
-      username: candidate,
-      updatedAt: new Date(),
-    },
-    create: {
-      id,
-      email,
-      name: name || undefined,
-      avatar: avatar || undefined,
-      username: candidate,
-      role: "USER",
-      sparks: 0,
-      isVerified: false,
-    },
-  });
-
-  const wallet = await prisma.wallet.upsert({
-    where: { userId: id },
-    update: {},
-    create: {
-      userId: id,
-      balance: 0,
-      escrow: 0,
-      pendingIn: 0,
-      pendingOut: 0,
-      blocked: 0,
-    },
+  // Upsert in a transaction
+  const { user, wallet } = await withTransaction(async (tx) => {
+    const u = await tx.user.upsert({
+      where: { id },
+      update: { email, name, avatar, username: candidate, updatedAt: new Date() },
+      create: { id, email, name, avatar, username: candidate, role: "USER", sparks: 0, isVerified: false },
+    });
+    const w = await tx.wallet.upsert({
+      where: { userId: id },
+      update: {},
+      create: { userId: id, balance: 0, escrow: 0, pendingIn: 0, pendingOut: 0, blocked: 0 },
+    });
+    return { user: u, wallet: w };
   });
 
   return NextResponse.json({
     success: true,
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      name: user.name,
-      avatar: user.avatar,
-      role: user.role,
-    },
-    wallet: {
-      id: wallet.id,
-      balance: wallet.balance,
-    },
+    user: { id: user.id, email: user.email, username: user.username, name: user.name, avatar: user.avatar, role: user.role },
+    wallet: { id: wallet.id, balance: wallet.balance },
   });
 });
+
+// AUTH_ENTERPRISE_APPLIED

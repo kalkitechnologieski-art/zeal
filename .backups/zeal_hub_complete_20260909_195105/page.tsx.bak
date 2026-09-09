@@ -9,4 +9,4 @@ export default function ServicesPage() {
   return <ZealHubClient />;
 }
 
-// ZEAL_HUB_COMPLETE_APPLIED
+// ZEAL_HUB_FIXED_APPLIED

@@ -1,25 +1,21 @@
 import { createServerClientFromCookies } from "@/lib/supabase/server";
-import { User, Session } from "@supabase/supabase-js";
-
-export async function getServerSession(): Promise<{ user: User | null; session: Session | null }> {
-  try {
-    const supabase = await createServerClientFromCookies();
-    if (!supabase || typeof supabase.auth.getSession !== "function") {
-      return { user: null, session: null };
-    }
-    const { data, error } = await supabase.auth.getSession();
-    if (error) {
-      console.error("Error getting server session:", error);
-      return { user: null, session: null };
-    }
-    return { user: data.session?.user ?? null, session: data.session ?? null };
-  } catch (error) {
-    console.error("Server session error:", error);
-    return { user: null, session: null };
-  }
-}
 
 export async function getUserId(): Promise<string | null> {
-  const { user } = await getServerSession();
-  return user?.id ?? null;
+  try {
+    const supabase = await createServerClientFromCookies();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) { console.warn("[getUserId] Auth error:", error.message); return null; }
+    return user?.id || null;
+  } catch (e) { console.error("[getUserId] Unexpected error:", e); return null; }
 }
+
+export async function getServerSession() {
+  try {
+    const supabase = await createServerClientFromCookies();
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) { console.warn("[getServerSession] Auth error:", error.message); return { user: null, session: null }; }
+    return { user: session?.user || null, session: session || null };
+  } catch (e) { console.error("[getServerSession] Unexpected error:", e); return { user: null, session: null }; }
+}
+
+// AUTH_ENTERPRISE_APPLIED

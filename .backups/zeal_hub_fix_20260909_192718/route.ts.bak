@@ -1,0 +1,90 @@
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError } from "@/lib/errors";
+import { getAIResponse } from "@/lib/ai/ai-chat";
+import { redis } from "@/lib/cache";
+
+const CATEGORY_MAP: Record<string, string> = {
+  "relationship": "Relationship & Dating Coaching",
+  "career": "Life & Career Coaching",
+  "anxiety": "Mental Health & Therapy",
+  "depression": "Mental Health & Therapy",
+  "horoscope": "Astrology & Divination",
+  "tarot": "Tarot & Oracle",
+  "numerology": "Numerology",
+  "palmistry": "Palmistry",
+  "psychic": "Psychic Mediumship",
+  "dream": "Dream Analysis",
+  "angel": "Angel & Spirit Guides",
+  "aura": "Aura Reading & Cleansing",
+  "past life": "Past Life & Soul Purpose",
+  "shadow": "Shadow Work & Ancestral Healing",
+  "therapy": "Mental Health & Therapy",
+  "coaching": "Life & Career Coaching",
+  "wellness": "Wellness & Holistic Health",
+  "reiki": "Energy Healing & Reiki",
+  "legal": "Professional & Expert Advice",
+  "finance": "Professional & Expert Advice",
+  "feng shui": "Feng Shui & Vastu",
+  "pet": "Pet Psychic & Animal Communication",
+  "yoga": "Yoga & Movement Therapy",
+  "meditation": "Meditation & Mindfulness",
+  "hypnosis": "Hypnotherapy & Hypnosis",
+  "sound healing": "Sound Healing & Vibrational Medicine",
+  "naturopathy": "Naturopathy",
+  "acupuncture": "Acupuncture & TCM",
+  "chiropractic": "Chiropractic & Physical Health",
+  "massage": "Massage Therapy",
+  "tantra": "Tantra & Sacred Sexuality",
+  "business": "Business & Entrepreneurship Coaching",
+  "nutrition": "Health & Nutrition Coaching",
+  "functional medicine": "Functional Medicine",
+  "aromatherapy": "Aromatherapy & Herbal Therapy",
+};
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  const { message, history } = await req.json();
+
+  const cacheKey = `zeal:chat:${message.toLowerCase().slice(0, 50)}`;
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      return NextResponse.json(parsed);
+    } catch (_) {}
+  }
+
+  const systemPrompt = `You are Zeal, a warm, empathetic AI concierge for a wellness platform.
+Your role is to help users find the right service category based on their needs.
+Categories available: ${Object.keys(CATEGORY_MAP).join(", ")}.
+Respond with a short, helpful message and suggest a category.
+Format your response as JSON: { "response": "...", "category": "Category Name" }.
+Keep responses under 50 words. Be warm, welcoming, and non-judgmental.`;
+
+  const response = await getAIResponse(
+    `User says: "${message}". Suggest the best category from the list.`,
+    "",
+    systemPrompt
+  );
+
+  let result = { response: response.content, category: null };
+  try {
+    const parsed = JSON.parse(response.content);
+    result = parsed;
+  } catch (_) {
+    const category = Object.keys(CATEGORY_MAP).find((key) =>
+      message.toLowerCase().includes(key)
+    );
+    result = {
+      response: response.content,
+      category: category ? CATEGORY_MAP[category] : "Wellness & Holistic Health",
+    };
+  }
+
+  await redis.setex(cacheKey, 3600, JSON.stringify(result));
+
+  return NextResponse.json(result);
+});
+
+// ZEAL_HUB_2_APPLIED

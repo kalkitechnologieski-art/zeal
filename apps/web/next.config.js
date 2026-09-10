@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
+const path = require("path");
+
+// Detect if we're in a monorepo (apps/web is nested)
+const isMonorepo = __dirname.includes("apps");
+const tracingRoot = isMonorepo
+  ? path.join(__dirname, "../../")
+  : __dirname;
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -10,7 +18,7 @@ const nextConfig = {
     "@zeal/utils",
   ],
 
-  // Image optimization for external sources
+  // Image optimization
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "ui-avatars.com" },
@@ -27,7 +35,7 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30,
   },
 
-  // Compiler optimizations
+  // Compiler
   compiler: {
     removeConsole:
       process.env.NODE_ENV === "production"
@@ -35,7 +43,7 @@ const nextConfig = {
         : false,
   },
 
-  // Experimental: enable server actions (already in use)
+  // Experimental
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",
@@ -48,11 +56,8 @@ const nextConfig = {
     ],
   },
 
-  // Production source maps (helps debugging on Vercel)
-  productionBrowserSourceMaps: false,
-
-  // Output file tracing root fix for monorepo
-  outputFileTracingRoot: require("path").join(__dirname, "../../"),
+  // Monorepo tracing
+  outputFileTracingRoot: tracingRoot,
 
   // Disable powered-by header
   poweredByHeader: false,
@@ -60,7 +65,42 @@ const nextConfig = {
   // Compression
   compress: true,
 
-  // Async redirects for common paths
+  // ─── Security headers (moved from vercel.json) ─────────────────────────────
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(self), geolocation=()",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+        ],
+      },
+      {
+        source: "/api/health",
+        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+      },
+      {
+        source: "/api/realtime/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+      },
+      {
+        source: "/api/wallet/webhooks/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store, max-age=0" }],
+      },
+    ];
+  },
+
+  // ─── Redirects ─────────────────────────────────────────────────────────────
   async redirects() {
     return [
       { source: "/signin", destination: "/auth/login", permanent: true },
@@ -71,5 +111,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-
-// VERCEL_SETUP_APPLIED

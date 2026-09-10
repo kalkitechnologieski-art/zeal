@@ -1,0 +1,46 @@
+import { Redis } from "@upstash/redis";
+
+/**
+ * Upstash Redis client with graceful fallback.
+ *
+ * During Vercel builds or when env vars are missing, returns a no-op stub
+ * that logs nothing. The app works without caching.
+ */
+
+const url = process.env.UPSTASH_REDIS_REST_URL;
+const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+let redisInstance: Redis | null = null;
+
+if (url && token) {
+  try {
+    redisInstance = new Redis({ url, token });
+  } catch {
+    redisInstance = null;
+  }
+}
+
+// ─── No-op fallback ───────────────────────────────────────────────────────────
+interface CacheStub {
+  get: (key: string) => Promise<null>;
+  set: (key: string, value: unknown) => Promise<null>;
+  setex: (key: string, ttl: number, value: unknown) => Promise<null>;
+  del: (key: string) => Promise<null>;
+  incr: (key: string) => Promise<0>;
+  expire: (key: string, ttl: number) => Promise<0>;
+  keys: (pattern: string) => Promise<string[]>;
+}
+
+const noopStub: CacheStub = {
+  get: async () => null,
+  set: async () => null,
+  setex: async () => null,
+  del: async () => null,
+  incr: async () => 0,
+  expire: async () => 0,
+  keys: async () => [],
+};
+
+export const redis = (redisInstance as unknown as CacheStub) || noopStub;
+
+export const isRedisConfigured = !!redisInstance;

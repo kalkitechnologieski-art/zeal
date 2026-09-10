@@ -27,7 +27,17 @@ export interface Wallet {
 
 export interface Notification {
   id: string;
-  type: 'chat' | 'call' | 'booking' | 'system' | 'referral' | 'quest' | 'new_post';
+  type:
+    | "chat"
+    | "call"
+    | "booking"
+    | "system"
+    | "referral"
+    | "quest"
+    | "new_post"
+    | "payment"
+    | "verification"
+    | "reminder";
   message: string;
   redirectUrl: string | null;
   read: boolean;

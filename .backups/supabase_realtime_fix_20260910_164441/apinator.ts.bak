@@ -1,0 +1,84 @@
+// Apinator implementation of RealtimeAdapter
+import type { RealtimeAdapter, RealtimeSubscription } from "./adapter";
+
+interface ApinatorOptions {
+  host: string;
+  appKey: string;
+}
+
+interface ApinatorClient {
+  connect(token: string): void;
+  disconnect(): void;
+  subscribe(channel: string): {
+    bind(event: string, cb: (data: unknown) => void): void;
+    unbind(event: string): void;
+    unsubscribe(): void;
+  };
+  connection: { state: string };
+}
+
+let clientInstance: ApinatorClient | null = null;
+
+function getClient(options: ApinatorOptions): ApinatorClient {
+  if (clientInstance) return clientInstance;
+  // Lazy import to keep build-safe if package is missing
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("@apinator/client");
+  const Client = mod.RealtimeClient || mod.default;
+  clientInstance = new Client(options.appKey, { host: options.host }) as ApinatorClient;
+  return clientInstance!;
+}
+
+export function createApinatorAdapter(options: ApinatorOptions): RealtimeAdapter {
+  let state: "connected" | "connecting" | "disconnected" = "disconnected";
+
+  return {
+    async connect(userId, token) {
+      const client = getClient(options);
+      state = "connecting";
+      try {
+        client.connect(token);
+        state = "connected";
+      } catch (err) {
+        state = "disconnected";
+        console.error("[Apinator] connect failed:", err);
+        throw err;
+      }
+    },
+    disconnect() {
+      if (clientInstance) {
+        clientInstance.disconnect();
+        state = "disconnected";
+      }
+    },
+    subscribe(channel, onMessage): RealtimeSubscription {
+      const client = getClient(options);
+      const ch = client.subscribe(channel);
+      ch.bind("message", onMessage);
+      return {
+        unsubscribe: () => {
+          try {
+            ch.unbind("message");
+            ch.unsubscribe();
+          } catch (err) {
+            console.warn("[Apinator] unsubscribe error:", err);
+          }
+        },
+      };
+    },
+    async publish(channel, event, data) {
+      // Publishing should go through server-side API
+      // Client-side publish is not supported
+      const res = await fetch("/api/realtime/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, event, data }),
+      });
+      if (!res.ok) throw new Error("Failed to publish realtime event");
+    },
+    getConnectionState: () => state,
+    isConnected: () => state === "connected",
+  };
+}
+
+// BATCH1_APPLIED

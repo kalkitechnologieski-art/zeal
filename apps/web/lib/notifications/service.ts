@@ -1,38 +1,89 @@
+// Notification service – unified email + in-app notifications
 import { prisma } from "@zeal/database";
+import { sendEmail } from "@/lib/emails";
+import { emailTemplates } from "@/lib/emails/templates";
+import { serverPublish } from "@/lib/realtime/server";
 
-// WebSocket stub – will be replaced with real socket.io later
-const ws = {
-  to: (room: string) => ({
-    emit: (event: string, data: any) => {
-      console.log(`[WS Stub] Emitting to ${room}: ${event}`, data);
-    },
-  }),
-  emit: (event: string, data: any) => {
-    console.log(`[WS Stub] Emitting globally: ${event}`, data);
-  },
-};
+export type NotificationType =
+  | "booking"
+  | "call"
+  | "chat"
+  | "system"
+  | "referral"
+  | "quest"
+  | "payment"
+  | "verification"
+  | "new_post"
+  | "reminder";
+
+export interface CreateNotificationParams {
+  userId: string;
+  type: NotificationType;
+  message: string;
+  redirectUrl?: string;
+  actorId: string;
+  metadata?: Record<string, unknown>;
+  sendEmail?: boolean;
+  emailTemplate?: keyof typeof emailTemplates;
+  emailContext?: Record<string, unknown>;
+}
+
+export interface NotificationListOptions {
+  limit?: number;
+  offset?: number;
+}
 
 export class NotificationService {
-  static async createNotification(data: {
-    userId: string;
-    type: string;
-    message: string;
-    redirectUrl?: string;
-    actorId: string;
-  }) {
+  static async createNotification(params: CreateNotificationParams) {
     const notif = await prisma.notification.create({
       data: {
-        userId: data.userId,
-        type: data.type,
-        message: data.message,
-        redirectUrl: data.redirectUrl || null,
-        actorId: data.actorId,
+        userId: params.userId,
+        type: params.type,
+        message: params.message,
+        redirectUrl: params.redirectUrl ?? null,
+        actorId: params.actorId,
         read: false,
       },
     });
 
-    // Emit real-time event to user's room
-    ws.to(`notif:${data.userId}`).emit("notification", notif);
+    // ─── Realtime push (best-effort) ─────────────────────────────────
+    try {
+      await serverPublish(`user:${params.userId}`, "notification", {
+        id: notif.id,
+        type: notif.type,
+        message: notif.message,
+        redirectUrl: notif.redirectUrl,
+        createdAt: notif.createdAt.toISOString(),
+      });
+    } catch (err) {
+      console.warn("[Notifications] Realtime publish failed:", err);
+    }
+
+    // ─── Email (opt-in) ──────────────────────────────────────────────
+    if (params.sendEmail && params.emailTemplate) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: params.userId },
+          select: { email: true },
+        });
+        if (user?.email) {
+          const tplFn = emailTemplates[params.emailTemplate] as
+            | ((...args: unknown[]) => { subject: string; html: string })
+            | undefined;
+          if (typeof tplFn === "function") {
+            const args = Object.values(params.emailContext ?? {});
+            const tpl = tplFn(...args);
+            await sendEmail({
+              to: user.email,
+              subject: tpl.subject,
+              html: tpl.html,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[Notifications] Email send failed:", err);
+      }
+    }
 
     return notif;
   }
@@ -53,10 +104,10 @@ export class NotificationService {
 
   static async getNotifications(
     userId: string,
-    options?: { limit?: number; offset?: number }
+    options?: NotificationListOptions,
   ) {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const limit = options?.limit ?? 50;
+    const offset = options?.offset ?? 0;
 
     const [items, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
@@ -71,6 +122,56 @@ export class NotificationService {
 
     return { items, total, unreadCount };
   }
+
+  static async broadcast(params: {
+    message: string;
+    type?: NotificationType;
+    actorId: string;
+    targetUserIds?: string[];
+    segment?: "all" | "consultants" | "users";
+  }): Promise<{ sent: number }> {
+    let userIds: string[] = params.targetUserIds ?? [];
+
+    if (!params.targetUserIds && params.segment) {
+      if (params.segment === "all") {
+        const users = await prisma.user.findMany({
+          select: { id: true },
+          take: 5000,
+        });
+        userIds = users.map((u) => u.id);
+      } else if (params.segment === "consultants") {
+        const consultants = await prisma.consultant.findMany({
+          where: { status: "VERIFIED" },
+          select: { userId: true },
+          take: 5000,
+        });
+        userIds = consultants.map((c) => c.userId);
+      } else {
+        const users = await prisma.user.findMany({
+          where: { role: "USER" },
+          select: { id: true },
+          take: 5000,
+        });
+        userIds = users.map((u) => u.id);
+      }
+    }
+
+    let sent = 0;
+    for (const userId of userIds) {
+      try {
+        await this.createNotification({
+          userId,
+          type: params.type ?? "system",
+          message: params.message,
+          actorId: params.actorId,
+        });
+        sent++;
+      } catch (err) {
+        console.warn("[Notifications] Broadcast failed for", userId, err);
+      }
+    }
+    return { sent };
+  }
 }
 
-// BATCH2_FIX_APPLIED
+// SUPABASE_REALTIME_FIX_APPLIED

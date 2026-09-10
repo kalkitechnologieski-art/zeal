@@ -102,6 +102,20 @@ model Consultant {
   bookings             Booking[]
   callSessions         CallSession[]
   activities           UserActivity[]
+  status              ConsultantStatus @default(PENDING)
+  verificationDocs    Json?
+  rejectionReason     String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  subdomain           String?          @unique
+  subdomainActive     Boolean          @default(false)
+  whiteLabelEnabled   Boolean          @default(false)
+  theme               Json?
+  chatRate            Float?           @default(50)
+  audioRate           Float?           @default(75)
+  videoRate           Float?           @default(100)
+  physicalRate        Float?           @default(150)
+  bufferMinutes       Int              @default(10)
 }
 
 model Booking {
@@ -237,9 +251,14 @@ model AIConsultant {
 
 enum Role {
   USER
-  HEALER
-  ADMIN
+  CLIENT_ADMIN
   SUPER_ADMIN
+}
+enum ConsultantStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
 }
 
 enum ConsultantCategory {
@@ -251,7 +270,6 @@ enum ConsultantCategory {
   VASTU
   REIKI
   LIFE_COACH
-  HEALER
   MOTIVATIONAL_SPEAKER
   SPIRITUAL_GUIDE
   YOGA_INSTRUCTOR

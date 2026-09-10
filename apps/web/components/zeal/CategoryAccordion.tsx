@@ -1,4 +1,6 @@
 "use client";
+
+import { getServiceHref } from "@/lib/services";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -194,7 +196,7 @@ export function CategoryAccordion() {
                               name={serviceName}
                               icon={iconEmoji}
                               description={desc}
-                              route={getServiceRoute(category.id, serviceName)}
+                              route={getServiceHref(category.id, serviceName)}
                               index={idx}
                             />
                           );

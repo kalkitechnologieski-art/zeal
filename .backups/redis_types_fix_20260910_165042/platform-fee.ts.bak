@@ -1,0 +1,44 @@
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { z } from "zod";
+import { redis } from "@/lib/cache";
+
+const PLATFORM_FEE_KEY = "platform_fee_percent";
+
+const FeeSchema = z.object({
+  feePercent: z.number().min(0).max(50),
+});
+
+// GET – returns current platform fee
+export const GET = withErrorHandler(async (req: Request) => {
+  // Public route – anyone can read the fee
+  let fee = await redis.get(PLATFORM_FEE_KEY);
+  if (!fee) {
+    // Default 10% if not set
+    fee = "10";
+    await redis.set(PLATFORM_FEE_KEY, fee);
+  }
+  // Ensure fee is a string before parsing
+  const feePercent = parseFloat(String(fee));
+  return NextResponse.json({ feePercent });
+});
+
+// POST – update platform fee (admin only)
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  // Check admin role – we'll assume middleware already did.
+
+  const body = await req.json();
+  const { feePercent } = FeeSchema.parse(body);
+
+  await redis.set(PLATFORM_FEE_KEY, String(feePercent));
+
+  // Audit log (optional)
+  console.log(`[Admin] Platform fee updated to ${feePercent}% by user ${userId}`);
+
+  return NextResponse.json({ feePercent });
+});
+
+// BATCH2_FIX_APPLIED

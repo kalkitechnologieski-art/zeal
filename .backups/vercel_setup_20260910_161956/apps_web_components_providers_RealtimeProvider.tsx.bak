@@ -1,0 +1,123 @@
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
+import { useAppStore } from "@/lib/store/appStore";
+import { getRealtimeClient, disconnectRealtimeClient } from "@/lib/realtime/client";
+
+interface RealtimeContextValue {
+  subscribe: (channel: string, event: string, handler: (data: unknown) => void) => () => void;
+  isConnected: boolean;
+}
+
+const RealtimeContext = createContext<RealtimeContextValue>({
+  subscribe: () => () => {},
+  isConnected: false,
+});
+
+export const useRealtimeContext = () => useContext(RealtimeContext);
+
+interface ClientRef {
+  subscribe(channel: string): {
+    bind(event: string, handler: (data: unknown) => void): void;
+    unsubscribe(): void;
+  };
+  connection: { bind(event: string, handler: () => void): void };
+}
+
+export function RealtimeProvider({ children }: { children: ReactNode }) {
+  const { user, setWallet, addNotification } = useAppStore();
+  const clientRef = useRef<ClientRef | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+
+    (async () => {
+      const client = (await getRealtimeClient()) as ClientRef | null;
+      if (!client || cancelled) return;
+
+      clientRef.current = client;
+      setReady(true);
+
+      client.connection.bind("connected", () => setIsConnected(true));
+      client.connection.bind("disconnected", () => setIsConnected(false));
+
+      // Subscribe to user-specific channel
+      const userChannel = client.subscribe(`user:${user.id}`);
+
+      userChannel.bind("notification", (data: unknown) => {
+        const payload = data as {
+          id?: string;
+          type?: string;
+          message?: string;
+          redirectUrl?: string;
+        };
+        if (payload?.message) {
+          addNotification({
+            id: payload.id || `notif-${Date.now()}`,
+            type: (payload.type as never) || "system",
+            message: payload.message,
+            redirectUrl: payload.redirectUrl || null,
+            read: false,
+            actorId: "system",
+          });
+        }
+      });
+
+      userChannel.bind("wallet:updated", (data: unknown) => {
+        const payload = data as { balance?: number };
+        if (typeof payload?.balance === "number") {
+          setWallet({ balance: payload.balance } as never);
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      setReady(false);
+      setIsConnected(false);
+    };
+  }, [user?.id, setWallet, addNotification]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnectRealtimeClient();
+    };
+  }, []);
+
+  const subscribe = useCallback(
+    (channel: string, event: string, handler: (data: unknown) => void) => {
+      const client = clientRef.current;
+      if (!client) return () => {};
+      try {
+        const sub = client.subscribe(channel);
+        sub.bind(event, handler);
+        return () => {
+          try { sub.unsubscribe(); } catch { /* ignore */ }
+        };
+      } catch {
+        return () => {};
+      }
+    },
+    [ready],
+  );
+
+  return (
+    <RealtimeContext.Provider value={{ subscribe, isConnected }}>
+      {children}
+    </RealtimeContext.Provider>
+  );
+}
+
+// BATCH_F1_APPLIED

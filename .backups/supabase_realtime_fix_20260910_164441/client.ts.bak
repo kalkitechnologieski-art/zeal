@@ -1,0 +1,70 @@
+// Apinator client wrapper – gracefully degrades if package missing
+"use client";
+
+interface RealtimeClientInstance {
+  subscribe(channel: string): {
+    bind(event: string, handler: (data: unknown) => void): void;
+    unsubscribe(): void;
+  };
+  disconnect(): void;
+  connection: {
+    bind(event: string, handler: () => void): void;
+  };
+}
+
+let clientInstance: RealtimeClientInstance | null = null;
+let initPromise: Promise<RealtimeClientInstance | null> | null = null;
+
+async function loadClientModule() {
+  try {
+    const mod = await import("@apinator/client");
+    const Client =
+      (mod as { RealtimeClient?: unknown; default?: unknown }).RealtimeClient ||
+      (mod as { default?: unknown }).default;
+    return Client as new (key: string, opts: { host: string; token: string }) => RealtimeClientInstance;
+  } catch {
+    return null;
+  }
+}
+
+export async function getRealtimeClient(): Promise<RealtimeClientInstance | null> {
+  if (clientInstance) return clientInstance;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
+    try {
+      const res = await fetch("/api/realtime/token", { method: "POST" });
+      if (!res.ok) {
+        console.warn("[Realtime] Failed to fetch token");
+        return null;
+      }
+
+      const { token, appKey } = (await res.json()) as { token: string; appKey: string };
+      const host = process.env.NEXT_PUBLIC_APINATOR_HOST || "wss://rt.apinator.io";
+
+      const Client = await loadClientModule();
+      if (!Client) {
+        console.warn("[Realtime] @apinator/client not installed – realtime disabled");
+        return null;
+      }
+
+      clientInstance = new Client(appKey, { host, token });
+      return clientInstance;
+    } catch (err) {
+      console.warn("[Realtime] Failed to initialize:", err);
+      return null;
+    }
+  })();
+
+  return initPromise;
+}
+
+export function disconnectRealtimeClient(): void {
+  if (clientInstance) {
+    try { clientInstance.disconnect(); } catch { /* ignore */ }
+    clientInstance = null;
+    initPromise = null;
+  }
+}
+
+// BATCH_F1_APPLIED

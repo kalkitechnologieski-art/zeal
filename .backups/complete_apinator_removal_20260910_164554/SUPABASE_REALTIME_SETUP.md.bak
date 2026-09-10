@@ -1,0 +1,33 @@
+# Supabase Realtime Setup for Zeal
+
+## 1. Enable Realtime on Tables
+
+Go to your Supabase Dashboard → **Database** → **Replication** → **Source**.
+
+Enable replication for these tables (so Postgres changes are broadcast):
+
+- `Notification`
+- `Wallet`
+- `Transaction`
+- `Booking`
+- `CallSession`
+
+## 2. Enable Realtime in Client
+
+Already wired — `apps/web/components/providers/RealtimeProvider.tsx`
+subscribes to `user:{userId}` broadcasts automatically on login.
+
+## 3. How Publishing Works
+
+### Server → Client (notifications)
+
+```ts
+import { serverPublish } from "@/lib/realtime/server";
+
+await serverPublish(`user:${userId}`, "notification", {
+  id: notif.id,
+  type: "booking",
+  message: "New booking confirmed",
+});
+
+// SUPABASE_REALTIME_FIX_APPLIED

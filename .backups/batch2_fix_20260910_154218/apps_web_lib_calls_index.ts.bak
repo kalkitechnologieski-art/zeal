@@ -1,0 +1,26 @@
+// Unified calls export
+export * from "./adapter";
+export { createMeteredAdapter } from "./metered";
+
+import { createMeteredAdapter } from "./metered";
+import type { CallAdapter } from "./adapter";
+
+let cachedAdapter: CallAdapter | null = null;
+
+export function getCallAdapter(): CallAdapter | null {
+  if (cachedAdapter) return cachedAdapter;
+
+  const apiKey = process.env.NEXT_PUBLIC_METERED_API_KEY || "";
+  const secretKey = process.env.METERED_SECRET_KEY || "";
+  const wsUrl = process.env.NEXT_PUBLIC_METERED_WS_URL;
+
+  if (!apiKey || !secretKey) {
+    console.warn("[Calls] Metered credentials missing – calls disabled");
+    return null;
+  }
+
+  cachedAdapter = createMeteredAdapter({ apiKey, secretKey, wsUrl });
+  return cachedAdapter;
+}
+
+// BATCH2_APPLIED

@@ -1,0 +1,124 @@
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { prisma, withTransaction, Prisma } from "@zeal/database";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { sendEmail } from "@/lib/emails";
+import { emailTemplates } from "@/lib/emails/templates";
+import { z } from "zod";
+
+// Categories must match Prisma's ConsultantCategory enum exactly.
+const CONSULTANT_CATEGORIES = [
+  "ASTROLOGER",
+  "PSYCHOLOGIST",
+  "TAROT",
+  "NUMEROLOGIST",
+  "PALMIST",
+  "VASTU",
+  "REIKI",
+  "LIFE_COACH",
+  "MOTIVATIONAL_SPEAKER",
+  "SPIRITUAL_GUIDE",
+  "YOGA_INSTRUCTOR",
+] as const;
+
+const OnboardingSchema = z.object({
+  category: z.enum(CONSULTANT_CATEGORIES),
+  specialties: z.array(z.string()).min(1).max(10),
+  languages: z.array(z.string()).min(1),
+  bio: z.string().min(50).max(1000),
+  perMinuteRate: z.number().min(10).max(500),
+  faith: z.enum(["HINDU", "ISLAM", "CHRISTIAN", "BUDDHIST", "JEWISH", "SIKH", "OTHER"]),
+  availability: z.record(z.string(), z.any()),
+  verificationDocs: z.array(z.string().url()).min(1),
+});
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  if (!userId) {
+    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  }
+
+  const existing = await prisma.consultant.findUnique({
+    where: { userId },
+    select: { id: true, status: true },
+  });
+
+  if (existing) {
+    if (existing.status === "VERIFIED") {
+      throw new AppError("You are already a verified consultant", 409, ErrorCode.BOOKING_CONFLICT);
+    }
+    if (existing.status === "PENDING") {
+      throw new AppError("Your application is already pending review", 409, ErrorCode.BOOKING_CONFLICT);
+    }
+  }
+
+  const body = await req.json();
+  const data = OnboardingSchema.parse(body);
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404, ErrorCode.NOT_FOUND);
+  }
+
+  const availabilityJson = data.availability as unknown as Prisma.InputJsonValue;
+  const docsJson = data.verificationDocs as unknown as Prisma.InputJsonValue;
+
+  const consultant = await withTransaction(async (tx) => {
+    if (existing) {
+      return tx.consultant.update({
+        where: { id: existing.id },
+        data: {
+          category: data.category,
+          specialties: data.specialties,
+          languages: data.languages,
+          bio: data.bio,
+          perMinuteRate: data.perMinuteRate,
+          faith: data.faith,
+          availability: availabilityJson,
+          verificationDocs: docsJson,
+          status: "PENDING",
+          isActive: false,
+          isVerified: false,
+          rejectionReason: null,
+        },
+      });
+    }
+
+    return tx.consultant.create({
+      data: {
+        userId,
+        category: data.category,
+        specialties: data.specialties,
+        languages: data.languages,
+        bio: data.bio,
+        perMinuteRate: data.perMinuteRate,
+        faith: data.faith,
+        availability: availabilityJson,
+        verificationDocs: docsJson,
+        status: "PENDING",
+        isActive: false,
+        isVerified: false,
+      },
+    });
+  });
+
+  try {
+    const tpl = emailTemplates.consultantApplicationReceived(user.name || "Applicant");
+    await sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html });
+  } catch (err) {
+    console.warn("[Onboarding] Confirmation email failed:", err);
+  }
+
+  return NextResponse.json({
+    success: true,
+    consultant: {
+      id: consultant.id,
+      status: consultant.status,
+      category: consultant.category,
+    },
+  });
+});

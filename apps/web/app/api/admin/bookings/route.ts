@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { withErrorHandler } from "@/lib/errors";
+import { requireSuperAdmin } from "@/lib/auth/admin";
 
 export const GET = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  await requireSuperAdmin();
+
   const url = new URL(req.url);
-  const status = url.searchParams.get("status") as any;
-  const limit = parseInt(url.searchParams.get("limit") || "50");
-  const offset = parseInt(url.searchParams.get("offset") || "0");
-  const where: any = {};
-  if (status) where.status = status;
+  const status = url.searchParams.get("status");
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
+  const page = Math.max(parseInt(url.searchParams.get("page") || "1"), 1);
+
+  const where = status ? { status: status as never } : {};
+
   const [bookings, total] = await Promise.all([
     prisma.booking.findMany({
       where,
@@ -22,10 +23,16 @@ export const GET = withErrorHandler(async (req: Request) => {
         },
       },
       orderBy: { scheduledAt: "desc" },
+      skip: (page - 1) * limit,
       take: limit,
-      skip: offset,
     }),
     prisma.booking.count({ where }),
   ]);
-  return NextResponse.json({ bookings, total });
+
+  return NextResponse.json({
+    bookings,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+  });
 });
+
+// BATCH3_APPLIED

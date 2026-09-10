@@ -1,41 +1,42 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { requireSuperAdmin, logAdminAction } from "@/lib/auth/admin";
 import { z } from "zod";
-import { ConsultantCategory } from "@prisma/client";
 
-const ConsultantUpdateSchema = z.object({
-  isVerified: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-  perMinuteRate: z.number().min(0).optional(),
-  category: z.nativeEnum(ConsultantCategory).optional(),
-  specialties: z.array(z.string()).optional(),
-  languages: z.array(z.string()).optional(),
-  bio: z.string().optional(),
+const UpdateSchema = z.object({
+  consultantId: z.string().cuid(),
+  action: z.enum([
+    "SUSPEND",
+    "REACTIVATE",
+    "FEATURE",
+    "UNFEATURE",
+    "SET_RATE",
+    "SET_SUBDOMAIN",
+  ]),
+  value: z.union([z.number(), z.string(), z.boolean()]).optional(),
 });
 
-// GET – list all consultants (human + AI) with pagination and filters
 export const GET = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  await requireSuperAdmin();
 
   const url = new URL(req.url);
-  const page = parseInt(url.searchParams.get("page") || "1");
-  const limit = parseInt(url.searchParams.get("limit") || "10");
+  const status = url.searchParams.get("status");
   const search = url.searchParams.get("search") || "";
-  const category = url.searchParams.get("category") as ConsultantCategory || "";
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
+  const page = Math.max(parseInt(url.searchParams.get("page") || "1"), 1);
 
-  // Build where clause with proper typing
-  const where: any = {};
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status;
   if (search) {
-    where.OR = [
-      { user: { name: { contains: search, mode: "insensitive" } } },
-      { user: { email: { contains: search, mode: "insensitive" } } },
-      { user: { username: { contains: search, mode: "insensitive" } } },
-    ];
+    where.user = {
+      OR: [
+        { email: { contains: search, mode: "insensitive" } },
+        { name: { contains: search, mode: "insensitive" } },
+        { username: { contains: search, mode: "insensitive" } },
+      ],
+    };
   }
-  if (category) where.category = category;
 
   const [consultants, total] = await Promise.all([
     prisma.consultant.findMany({
@@ -44,106 +45,77 @@ export const GET = withErrorHandler(async (req: Request) => {
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
+            name: true,
             username: true,
             avatar: true,
             role: true,
-            isVerified: true,
           },
         },
       },
+      orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { createdAt: "desc" },
     }),
     prisma.consultant.count({ where }),
   ]);
 
   return NextResponse.json({
-    items: consultants,
+    consultants,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 });
 
-// POST – create a new consultant (manual)
 export const POST = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  const adminId = await requireSuperAdmin();
 
   const body = await req.json();
-  const { userId: targetUserId, category, specialties, languages, perMinuteRate, bio } = body;
+  const { consultantId, action, value } = UpdateSchema.parse(body);
 
-  const existing = await prisma.consultant.findUnique({
-    where: { userId: targetUserId },
-  });
-  if (existing) {
-    throw new AppError("User is already a consultant", 409, ErrorCode.BOOKING_CONFLICT);
-  }
-
-  const consultant = await prisma.consultant.create({
-    data: {
-      userId: targetUserId,
-      category: category as ConsultantCategory,
-      specialties: specialties || [],
-      languages: languages || [],
-      perMinuteRate: perMinuteRate || 50,
-      bio: bio || "",
-      isActive: true,
-      availability: {},
-    },
-    include: { user: true },
-  });
-
-  return NextResponse.json({ consultant });
-});
-
-// PUT – update a consultant
-export const PUT = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-
-  const url = new URL(req.url);
-  const consultantId = url.searchParams.get("id");
-  if (!consultantId) {
-    throw new AppError("Missing consultant ID", 400, ErrorCode.VALIDATION_INPUT);
-  }
-
-  const body = await req.json();
-  const data = ConsultantUpdateSchema.parse(body);
-
-  // Convert category if provided
-  const updateData: any = { ...data };
-  if (data.category) {
-    updateData.category = data.category as ConsultantCategory;
-  }
-
-  const consultant = await prisma.consultant.update({
+  const consultant = await prisma.consultant.findUnique({
     where: { id: consultantId },
-    data: updateData,
-    include: { user: true },
+    select: { id: true, userId: true, isActive: true, status: true },
   });
-
-  return NextResponse.json({ consultant });
-});
-
-// DELETE – deactivate consultant (soft delete)
-export const DELETE = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-
-  const url = new URL(req.url);
-  const consultantId = url.searchParams.get("id");
-  if (!consultantId) {
-    throw new AppError("Missing consultant ID", 400, ErrorCode.VALIDATION_INPUT);
+  if (!consultant) {
+    throw new AppError("Consultant not found", 404, ErrorCode.NOT_FOUND);
   }
 
-  const consultant = await prisma.consultant.update({
+  let update: Record<string, unknown> = {};
+  switch (action) {
+    case "SUSPEND":
+      update = { isActive: false, status: "SUSPENDED" };
+      break;
+    case "REACTIVATE":
+      update = { isActive: true, status: "VERIFIED" };
+      break;
+    case "FEATURE":
+      update = { isFeatured: true };
+      break;
+    case "UNFEATURE":
+      update = { isFeatured: false };
+      break;
+    case "SET_RATE":
+      update = { perMinuteRate: Number(value) };
+      break;
+    case "SET_SUBDOMAIN":
+      update = { subdomain: String(value), subdomainActive: true };
+      break;
+  }
+
+  const updated = await prisma.consultant.update({
     where: { id: consultantId },
-    data: { isActive: false },
+    data: update,
   });
 
-  return NextResponse.json({ consultant });
+  await logAdminAction({
+    adminId,
+    action,
+    targetType: "consultant",
+    targetId: consultantId,
+    metadata: { value },
+  });
+
+  return NextResponse.json({ consultant: updated });
 });
 
-// BATCH2_FIX_APPLIED
+// BATCH3_APPLIED

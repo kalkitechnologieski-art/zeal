@@ -1,0 +1,43 @@
+// Unified realtime export – Supabase Realtime backend.
+//
+// Replaces the old Apinator-based adapter. Provides:
+//   • Client-side subscribe/publish (browser → Supabase WebSocket)
+//   • Server-side publish (service role → Supabase)
+//   • Backward-compatible `getRealtimeAdapter()` for legacy code
+
+export {
+  subscribeToChannel,
+  publishToChannel,
+  subscribeToPostgresChanges,
+  disconnectAllChannels,
+  getSupabaseRealtimeClient,
+} from "./supabase-realtime";
+
+export { serverPublish } from "./server";
+
+export type { RealtimeHandler } from "./supabase-realtime";
+
+// ─── Backward-compat adapter ──────────────────────────────────────────────────
+// Legacy code calls `getRealtimeAdapter().publish(channel, event, data)`.
+// We detect the environment and route to the correct implementation.
+
+export interface RealtimeAdapter {
+  publish(channel: string, event: string, data: unknown): Promise<void>;
+}
+
+export function getRealtimeAdapter(): RealtimeAdapter {
+  return {
+    async publish(channel: string, event: string, data: unknown): Promise<void> {
+      if (typeof window === "undefined") {
+        // Server-side: use service-role client
+        const { serverPublish } = await import("./server");
+        return serverPublish(channel, event, data);
+      }
+      // Client-side: use anon client
+      const { publishToChannel } = await import("./supabase-realtime");
+      return publishToChannel(channel, event, data);
+    },
+  };
+}
+
+// SUPABASE_REALTIME_FIX_APPLIED

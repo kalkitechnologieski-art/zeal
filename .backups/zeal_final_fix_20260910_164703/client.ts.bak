@@ -1,0 +1,13 @@
+"use client";
+
+// Compatibility shim – realtime is now powered by Supabase.
+//
+// Anything importing `getRealtimeClient` should instead use
+// `getSupabaseRealtimeClient` from `./supabase-realtime`.
+//
+// This file exists only for backward compatibility with older imports.
+
+export {
+  getSupabaseRealtimeClient as getRealtimeClient,
+  disconnectAllChannels as disconnectRealtimeClient,
+} from "./supabase-realtime";

@@ -1,38 +1,38 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { wsClient } from "@/lib/websocket/client";
+import { useCallback } from "react";
+import { useRealtimeConnection } from "./useRealtime";
 
-export function useWebSocket(userId: string | undefined) {
-  const [isConnected, setIsConnected] = useState(false);
+/**
+ * Compatibility hook – the actual realtime connection lives in RealtimeProvider.
+ * Use `useRealtime(channel, event, handler)` for subscriptions.
+ */
+export function useWebSocket(_userId: string | undefined) {
+  const isConnected = useRealtimeConnection();
 
-  useEffect(() => {
-    if (!userId) return;
-    wsClient.connect(userId);
-    setIsConnected(wsClient.isConnected());
-
-    const handleConnect = () => setIsConnected(true);
-    const handleDisconnect = () => setIsConnected(false);
-
-    wsClient.on("connect", handleConnect);
-    wsClient.on("disconnect", handleDisconnect);
-
-    return () => {
-      wsClient.off("connect", handleConnect);
-      wsClient.off("disconnect", handleDisconnect);
-    };
-  }, [userId]);
-
-  const sendMessage = useCallback((event: string, data: any) => {
-    wsClient.emit(event, data);
+  const sendMessage = useCallback(async (event: string, data: unknown) => {
+    try {
+      const res = await fetch("/api/realtime/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: "user:broadcast",
+          event,
+          data,
+        }),
+      });
+      if (!res.ok) {
+        console.warn("[useWebSocket] Publish failed");
+      }
+    } catch (err) {
+      console.warn("[useWebSocket] Publish error:", err);
+    }
   }, []);
 
-  const subscribe = useCallback((event: string, callback: (data: any) => void) => {
-    wsClient.on(event, callback);
-    return () => wsClient.off(event, callback);
-  }, []);
-
-  return { isConnected, sendMessage, subscribe };
+  return {
+    isConnected,
+    sendMessage,
+  };
 }
 
-// BATCH3_APPLIED
+// BATCH_F1_APPLIED

@@ -1,0 +1,89 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@zeal/database";
+import { normalizeTheme } from "@/lib/white-label/theme";
+import Link from "next/link";
+
+interface PageProps {
+  params: Promise<{ subdomain: string }>;
+}
+
+export default async function WhiteLabelHomePage({ params }: PageProps) {
+  const { subdomain } = await params;
+
+  const consultant = await prisma.consultant.findUnique({
+    where: { subdomain },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+  });
+
+  if (!consultant || !consultant.subdomainActive) notFound();
+
+  const theme = normalizeTheme(consultant.theme);
+  const name = consultant.user.name || consultant.user.username;
+  const bio =
+    consultant.bio ||
+    `Consult with ${name} for guidance on relationships, career, and life.`;
+
+  const services = [
+    {
+      title: "Chat",
+      desc: "Per-minute text consultation",
+      price: consultant.chatRate,
+    },
+    {
+      title: "Audio Call",
+      desc: "Live voice consultation",
+      price: consultant.audioRate,
+    },
+    {
+      title: "Video Call",
+      desc: "Face-to-face video consultation",
+      price: consultant.videoRate,
+    },
+  ];
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-12">
+      <section className="text-center mb-12">
+        <h1 className="text-4xl md:text-5xl font-light text-[#5E4B8B] mb-4">
+          {theme.welcomeMessage}
+        </h1>
+        <p className="text-lg text-[#B8A1D9] max-w-2xl mx-auto">{bio}</p>
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+        {services.map((s) => (
+          <div
+            key={s.title}
+            className="p-6 rounded-2xl border border-[#E1C5E7] bg-white"
+          >
+            <h3 className="font-semibold text-[#5E4B8B] mb-1">{s.title}</h3>
+            <p className="text-sm text-[#B8A1D9] mb-3">{s.desc}</p>
+            <p className="text-lg font-bold text-[#9D7DC5]">
+              {s.price ? `₹${s.price}/min` : "Contact for pricing"}
+            </p>
+          </div>
+        ))}
+      </section>
+
+      <div className="text-center">
+        <Link
+          href={`/white-label/${subdomain}/book`}
+          className="inline-block px-8 py-3 rounded-xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium shadow-lg"
+        >
+          Book a Session
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// BATCH3_FIX_APPLIED

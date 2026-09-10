@@ -1,10 +1,12 @@
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SupabaseAuthProvider } from "@/components/providers/SupabaseAuthProvider";
+import { RealtimeProvider } from "@/components/providers/RealtimeProvider";
 import { QueryProvider } from "@/lib/query/provider";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
+import { IncomingCallOverlay } from "@/components/call/IncomingCallOverlay";
 
 export const metadata = {
   title: "Zeal – Faith & Wellness Platform",
@@ -34,6 +36,7 @@ export default function RootLayout({
         >
           <QueryProvider>
             <SupabaseAuthProvider>
+              <RealtimeProvider>
               <div className="flex flex-col min-h-screen min-h-dvh">
                 <TopBar />
                 <main className="flex-1 overflow-y-auto pt-16 pb-16">
@@ -41,10 +44,12 @@ export default function RootLayout({
                 </main>
                 <BottomNav />
               </div>
+              </RealtimeProvider>
             </SupabaseAuthProvider>
           </QueryProvider>
           <Toaster />
         </ThemeProvider>
+              <IncomingCallOverlay />
       </body>
     </html>
   );

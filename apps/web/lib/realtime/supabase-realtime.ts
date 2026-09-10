@@ -1,0 +1,157 @@
+"use client";
+
+/**
+ * Supabase Realtime client wrapper.
+ *
+ * Why Supabase Realtime (not Apinator/Centrifugo):
+ *   • Vercel Hobby cannot run persistent WebSocket servers.
+ *   • Supabase Realtime uses WebSocket from browser → Supabase directly,
+ *     bypassing Vercel entirely.
+ *   • Free tier: 200 concurrent connections, 2M messages/month.
+ *   • Built on top of Postgres changes + broadcast + presence.
+ *
+ * Docs: https://supabase.com/docs/guides/realtime
+ */
+
+import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+
+let client: SupabaseClient | null = null;
+const channels = new Map<string, RealtimeChannel>();
+
+export function getSupabaseRealtimeClient(): SupabaseClient | null {
+  if (client) return client;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    console.warn("[SupabaseRealtime] Missing env vars – realtime disabled");
+    return null;
+  }
+
+  client = createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  });
+
+  return client;
+}
+
+export type RealtimeHandler = (data: unknown) => void;
+
+/**
+ * Subscribe to a Supabase broadcast channel.
+ * Automatically handles reconnection via Supabase client internals.
+ */
+export function subscribeToChannel(
+  channelName: string,
+  eventName: string,
+  handler: RealtimeHandler,
+): () => void {
+  const sb = getSupabaseRealtimeClient();
+  if (!sb) return () => {};
+
+  let channel = channels.get(channelName);
+  if (!channel) {
+    channel = sb.channel(channelName, {
+      config: {
+        broadcast: { self: false, ack: false },
+        presence: { key: "" },
+      },
+    });
+    channel.subscribe((status) => {
+      if (status === "CHANNEL_ERROR") {
+        console.warn(`[SupabaseRealtime] Channel error: ${channelName}`);
+      }
+    });
+    channels.set(channelName, channel);
+  }
+
+  channel.on("broadcast", { event: eventName }, (payload) => {
+    handler(payload.payload);
+  });
+
+  return () => {
+    const ch = channels.get(channelName);
+    if (ch) {
+      try {
+        ch.unsubscribe();
+      } catch (err) {
+        console.warn(`[SupabaseRealtime] Unsubscribe error:`, err);
+      }
+      channels.delete(channelName);
+    }
+  };
+}
+
+/**
+ * Publish a broadcast event to a channel (client → client).
+ */
+export async function publishToChannel(
+  channelName: string,
+  eventName: string,
+  data: unknown,
+): Promise<void> {
+  const sb = getSupabaseRealtimeClient();
+  if (!sb) return;
+
+  let channel = channels.get(channelName);
+  if (!channel) {
+    channel = sb.channel(channelName);
+    await channel.subscribe();
+    channels.set(channelName, channel);
+  }
+
+  await channel.send({
+    type: "broadcast",
+    event: eventName,
+    payload: data,
+  });
+}
+
+/**
+ * Subscribe to Postgres changes on a table (RLS-aware).
+ */
+export function subscribeToPostgresChanges(
+  table: string,
+  filter: string,
+  handler: RealtimeHandler,
+): () => void {
+  const sb = getSupabaseRealtimeClient();
+  if (!sb) return () => {};
+
+  const channelName = `db:${table}:${filter}`;
+  const channel = sb
+    .channel(channelName)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table, filter },
+      (payload) => handler(payload.new),
+    )
+    .subscribe();
+
+  return () => {
+    channel.unsubscribe();
+  };
+}
+
+export function disconnectAllChannels(): void {
+  for (const [name, channel] of channels.entries()) {
+    try {
+      channel.unsubscribe();
+    } catch (err) {
+      console.warn(`[SupabaseRealtime] Failed to unsubscribe ${name}:`, err);
+    }
+  }
+  channels.clear();
+}
+
+// SUPABASE_REALTIME_FIX_APPLIED

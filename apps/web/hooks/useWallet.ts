@@ -1,72 +1,57 @@
-'use client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAppStore } from '@/lib/store/appStore';
-import { useSocket } from './useSocket';
-import { useEffect } from 'react';
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useAppStore } from "@/lib/store/appStore";
+import { useRealtime } from "./useRealtime";
 
 export function useWallet() {
   const { wallet, setWallet } = useAppStore();
   const queryClient = useQueryClient();
-  const socket = useSocket();
-
-  // Listen for wallet updates via WebSocket
-  useEffect(() => {
-    if (!socket) return;
-    socket.on('wallet:update', (data: any) => {
-      if (data.balance !== undefined) {
-        setWallet({ ...wallet, balance: data.balance } as any);
-        queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      }
-    });
-    return () => {
-      socket.off('wallet:update');
-    };
-  }, [socket, setWallet, queryClient]);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ["wallet"],
     queryFn: async () => {
-      const res = await fetch('/api/wallet/balance');
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to fetch wallet');
-      }
+      const res = await fetch("/api/wallet/balance");
+      if (!res.ok) throw new Error("Failed to fetch wallet");
       return res.json();
     },
-    retry: false,
+    staleTime: 60_000,
   });
 
-  if (data && !isLoading) {
-    setWallet(data.wallet);
-  }
+  useEffect(() => {
+    if (data?.wallet) setWallet(data.wallet);
+  }, [data, setWallet]);
 
-  const topUpMutation = useMutation({
+  // Real-time wallet updates
+  useRealtime("user:wallet", "wallet:updated", (event) => {
+    const payload = event as { balance?: number };
+    if (typeof payload.balance === "number") {
+      setWallet({ balance: payload.balance } as never);
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    }
+  });
+
+  const topUp = useMutation({
     mutationFn: async (amount: number) => {
-      const res = await fetch('/api/wallet/topup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/wallet/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Top-up failed');
-      }
+      if (!res.ok) throw new Error("Top-up failed");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
     },
   });
 
   const transactionsQuery = useQuery({
-    queryKey: ['transactions'],
+    queryKey: ["transactions"],
     queryFn: async () => {
-      const res = await fetch('/api/wallet/transactions');
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message || 'Failed to fetch transactions');
-      }
+      const res = await fetch("/api/wallet/transactions");
+      if (!res.ok) throw new Error("Failed to fetch transactions");
       return res.json();
     },
   });
@@ -75,9 +60,11 @@ export function useWallet() {
     wallet,
     isLoading,
     error,
-    topUp: topUpMutation.mutate,
-    topUpPending: topUpMutation.isPending,
+    topUp: topUp.mutate,
+    topUpPending: topUp.isPending,
     transactions: transactionsQuery.data?.items || [],
     transactionsLoading: transactionsQuery.isLoading,
   };
 }
+
+// BATCH_F1_APPLIED

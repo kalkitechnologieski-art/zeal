@@ -1,33 +1,41 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
-import { instamojo } from "@/lib/wallet/instamojo";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { getPaymentAdapter } from "@/lib/payments";
+import { z } from "zod";
+
+const CreateOrderSchema = z.object({
+  amount: z.number().positive().max(100000),
+  currency: z.string().default("INR"),
+  purpose: z.string().max(200).optional(),
+});
 
 export const POST = withErrorHandler(async (req: Request) => {
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
-
-  const { amount, purpose, buyer_name, buyer_email, buyer_phone } =
-    await req.json();
-
-  if (!amount || amount < 1) {
-    throw new AppError("Invalid amount", HTTP_STATUS.BAD_REQUEST);
+  if (!userId) {
+    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
   }
 
-  // Create a payment request for any purpose (booking, service, etc.)
-  const paymentRequest = await instamojo.createPaymentRequest({
+  const body = await req.json();
+  const { amount, currency, purpose } = CreateOrderSchema.parse(body);
+
+  const adapter = getPaymentAdapter();
+  const order = await adapter.createOrder({
     amount,
-    purpose: purpose || "Payment",
-    buyer_name: buyer_name || "User",
-    buyer_email: buyer_email || "user@example.com",
-    buyer_phone: buyer_phone || "9999999999",
-    redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
-    webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/wallet/webhooks/instamojo`,
+    currency,
+    receipt: `order_${Date.now()}_${userId.slice(0, 8)}`,
+    notes: {
+      userId,
+      purpose: purpose || "Zeal payment",
+    },
   });
 
   return NextResponse.json({
-    paymentRequestId: paymentRequest.id,
-    payment_url: paymentRequest.longurl,
-    amount: paymentRequest.amount,
+    orderId: order.orderId,
+    amount: order.amount,
+    currency: order.currency,
+    keyId: order.keyId,
   });
 });
+
+// BATCH2_APPLIED

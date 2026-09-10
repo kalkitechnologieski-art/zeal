@@ -1,0 +1,45 @@
+// Module shim for @apinator/client
+//
+// The package is loaded lazily at runtime. This declaration tells TypeScript
+// that the module exists so dynamic imports compile cleanly, even when the
+// package has not been installed yet. The real implementation will be picked
+// up at runtime once the dependency is added.
+//
+// If you install @apinator/client and it ships its own types, you can delete
+// this file – TypeScript will prefer the package's own declarations.
+
+declare module "@apinator/client" {
+  export interface ApinatorChannel {
+    bind(event: string, handler: (data: unknown) => void): void;
+    unbind(event: string, handler?: (data: unknown) => void): void;
+    unsubscribe(): void;
+  }
+
+  export interface ApinatorConnection {
+    bind(event: string, handler: () => void): void;
+    unbind(event: string, handler?: () => void): void;
+  }
+
+  export interface ApinatorOptions {
+    host: string;
+    token?: string;
+    enabledTransports?: string[];
+    timeout?: number;
+  }
+
+  export class RealtimeClient {
+    constructor(appKey: string, options: ApinatorOptions);
+    connection: ApinatorConnection;
+    subscribe(channel: string): ApinatorChannel;
+    connect(): void;
+    disconnect(): void;
+    isConnected(): boolean;
+  }
+
+  const _default: {
+    RealtimeClient: typeof RealtimeClient;
+  };
+  export default _default;
+}
+
+// FIX_F1_APPLIED

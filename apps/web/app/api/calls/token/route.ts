@@ -1,25 +1,48 @@
+import { NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
-import { NextResponse } from 'next/server';
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { getCallAdapter } from "@/lib/calls";
 
-export async function POST(req: Request) {
-  try {
-    const userId = await getUserId();
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
   if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // In production, generate a LiveKit token or EasyCall token
-    // For now, return a mock token
-    return NextResponse.json({
-      token: `mock-token-${Date.now()}`,
-      url: process.env.NEXT_PUBLIC_WS_URL || 'wss://api.zeal.com',
-    });
-  } catch (error) {
-    console.error('Token error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate token' },
-      { status: 500 }
-    );
+    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
   }
-}
+
+  const body = (await req.json()) as { bookingId?: string; roomName?: string };
+  const roomName = body.roomName || (body.bookingId ? `booking-${body.bookingId}` : null);
+  if (!roomName) {
+    throw new AppError("bookingId or roomName required", 400, ErrorCode.VALIDATION_INPUT);
+  }
+
+  // If we have a bookingId, verify access
+  if (body.bookingId) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: body.bookingId },
+      include: { consultant: { select: { userId: true } } },
+    });
+    if (!booking) {
+      throw new AppError("Booking not found", 404, ErrorCode.BOOKING_NOT_FOUND);
+    }
+    const allowed = booking.userId === userId || booking.consultant.userId === userId;
+    if (!allowed) {
+      throw new AppError("Not authorized", 403, ErrorCode.AUTH_FORBIDDEN);
+    }
+  }
+
+  const callAdapter = getCallAdapter();
+  if (!callAdapter) {
+    throw new AppError("Call service unavailable", 503, ErrorCode.CONFIG_ERROR);
+  }
+
+  const { token, wsUrl, expiresAt } = await callAdapter.generateToken({
+    roomName,
+    identity: userId,
+    ttl: 7200,
+  });
+
+  return NextResponse.json({ token, roomName, wsUrl, expiresAt });
+});
+
+// BATCH2_APPLIED

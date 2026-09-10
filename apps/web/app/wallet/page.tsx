@@ -1,141 +1,225 @@
-'use client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle, Button, Input } from '@zeal/ui';
-import { useAppStore } from '@/lib/store/appStore';
-import { ArrowUpRight, ArrowDownRight, Clock, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Clock, Sparkles } from "lucide-react";
+import { RazorpayButton } from "@/components/payments/RazorpayButton";
+import { useAppStore } from "@/lib/store/appStore";
+import { useRealtime } from "@/hooks/useRealtime";
+import { formatCurrency } from "@zeal/utils";
+
+const PRESET_AMOUNTS = [100, 500, 1000, 2000];
 
 export default function WalletPage() {
-  const { wallet, setWallet } = useAppStore();
-  const [topupAmount, setTopupAmount] = useState(100);
+  const { user, wallet, setWallet } = useAppStore();
   const queryClient = useQueryClient();
+  const [selectedAmount, setSelectedAmount] = useState(500);
+  const [customAmount, setCustomAmount] = useState("");
 
   const { data, isLoading } = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ["wallet"],
     queryFn: async () => {
-      const res = await fetch('/api/wallet/balance');
-      if (!res.ok) throw new Error('Failed to fetch wallet');
+      const res = await fetch("/api/wallet/balance");
+      if (!res.ok) throw new Error("Failed to fetch wallet");
       return res.json();
     },
   });
 
-  const { data: transactions } = useQuery({
-    queryKey: ['transactions'],
+  const { data: txData } = useQuery({
+    queryKey: ["transactions"],
     queryFn: async () => {
-      const res = await fetch('/api/wallet/transactions');
-      if (!res.ok) throw new Error('Failed to fetch transactions');
+      const res = await fetch("/api/wallet/transactions");
+      if (!res.ok) throw new Error("Failed to fetch transactions");
       return res.json();
     },
   });
 
-  if (data && data.wallet) setWallet(data.wallet);
-
-  const topUpMutation = useMutation({
-    mutationFn: async (amount: number) => {
-      const res = await fetch('/api/wallet/topup', {
-        method: 'POST',
-        body: JSON.stringify({ amount }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error('Top-up failed');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    },
-  });
-
-  if (isLoading) {
-    return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[#9D7DC5] border-t-transparent rounded-full animate-spin" /></div>;
+  if (data?.wallet && !wallet) {
+    setWallet(data.wallet);
   }
 
-  const balance = wallet?.balance || 0;
+  // Real-time wallet balance updates
+  useRealtime(
+    user?.id ? `user:${user.id}` : null,
+    "wallet:updated",
+    (event) => {
+      const payload = event as { balance?: number };
+      if (typeof payload.balance === "number") {
+        setWallet({ balance: payload.balance } as never);
+        queryClient.invalidateQueries({ queryKey: ["wallet"] });
+        queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      }
+    },
+  );
+
+  const balance = wallet?.balance ?? data?.wallet?.balance ?? 0;
+  const transactions = txData?.items || [];
+  const finalAmount = customAmount ? Number(customAmount) : selectedAmount;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6">
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      {/* Balance Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-6"
+        transition={{ type: "spring", stiffness: 180, damping: 22 }}
+        className="rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[#9D7DC5] via-[#7A5A9E] to-[#533AFD] text-white shadow-2xl shadow-[#9D7DC5]/30"
       >
-        <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white">Wallet</h1>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <p className="text-sm text-white/70 mb-1">Available Balance</p>
+            <p className="text-4xl md:text-5xl font-bold tracking-tight">
+              {formatCurrency(balance)}
+            </p>
+          </div>
+          <div className="p-3 rounded-2xl bg-white/15 backdrop-blur-sm">
+            <WalletIcon className="w-6 h-6" />
+          </div>
+        </div>
 
-        {/* Balance Card */}
-        <Card className="glass-animated border border-[#E1C5E7]/30 dark:border-gray-700/30">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#B8A1D9] dark:text-gray-400">Available Balance</p>
-                <p className="text-3xl font-bold text-[#5E4B8B] dark:text-white">₹{balance.toFixed(2)}</p>
-              </div>
-              <div className="p-3 rounded-full bg-[#9D7DC5]/10 dark:bg-[#9D7DC5]/20">
-                <Sparkles className="w-6 h-6 text-[#9D7DC5]" />
-              </div>
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  value={topupAmount}
-                  onChange={(e) => setTopupAmount(Number(e.target.value))}
-                  className="glass border-[#E1C5E7]/30 dark:border-gray-700/30"
-                />
-              </div>
-              <Button
-                variant="primary"
-                onClick={() => topUpMutation.mutate(topupAmount)}
-                disabled={topUpMutation.isPending}
-                className="btn-luxury"
+        {wallet?.pendingOut && wallet.pendingOut > 0 && (
+          <div className="flex items-center gap-2 text-sm bg-white/10 rounded-xl px-3 py-2">
+            <Clock className="w-4 h-4" />
+            <span>
+              {formatCurrency(wallet.pendingOut)} pending withdrawal
+            </span>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Top Up Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, type: "spring", stiffness: 180, damping: 22 }}
+        className="glass-card-3d p-5 md:p-6"
+      >
+        <h2 className="font-semibold text-[#5E4B8B] dark:text-white mb-4 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-[#FFD700]" /> Add Money
+        </h2>
+
+        {/* Preset chips */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {PRESET_AMOUNTS.map((amt) => (
+            <motion.button
+              key={amt}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                setSelectedAmount(amt);
+                setCustomAmount("");
+              }}
+              className={`py-3 rounded-xl text-sm font-medium transition-all ${
+                selectedAmount === amt && !customAmount
+                  ? "bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white shadow-lg"
+                  : "bg-white/60 dark:bg-gray-800/60 text-[#5E4B8B] dark:text-white border border-[#E1C5E7] dark:border-gray-700"
+              }`}
+            >
+              ₹{amt}
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Custom amount */}
+        <div className="relative mb-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#B8A1D9] font-medium">
+            ₹
+          </span>
+          <input
+            type="number"
+            placeholder="Enter custom amount"
+            value={customAmount}
+            onChange={(e) => setCustomAmount(e.target.value)}
+            className="w-full pl-9 pr-4 py-3.5 rounded-2xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white placeholder:text-[#B8A1D9] focus:ring-2 focus:ring-[#9D7DC5] outline-none"
+            min="1"
+          />
+        </div>
+
+        <RazorpayButton
+          amount={finalAmount}
+          purpose="Wallet top-up"
+          topup
+          disabled={finalAmount < 1}
+          onSuccess={() => {
+            setCustomAmount("");
+            queryClient.invalidateQueries({ queryKey: ["wallet"] });
+            queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          }}
+        />
+      </motion.div>
+
+      {/* Transactions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, type: "spring", stiffness: 180, damping: 22 }}
+        className="glass-card-3d p-5 md:p-6"
+      >
+        <h2 className="font-semibold text-[#5E4B8B] dark:text-white mb-4">
+          Transaction History
+        </h2>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-14 rounded-xl bg-[#F4E8F7] dark:bg-gray-800 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <p className="text-center text-[#B8A1D9] dark:text-gray-400 py-8">
+            No transactions yet
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {transactions.slice(0, 20).map((tx: {
+              id: string;
+              type: string;
+              amount: number;
+              description: string;
+              createdAt: string;
+            }) => (
+              <div
+                key={tx.id}
+                className="flex items-center justify-between p-3 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40 transition-colors"
               >
-                {topUpMutation.isPending ? 'Processing...' : 'Top Up'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Transactions */}
-        <Card className="glass-animated border border-[#E1C5E7]/30 dark:border-gray-700/30">
-          <CardHeader>
-            <CardTitle className="text-[#5E4B8B] dark:text-white">Transaction History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {transactions?.items?.length ? (
-                transactions.items.map((tx: any) => (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between p-3 rounded-xl glass hover:bg-white/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {tx.type === 'TOPUP' ? (
-                        <ArrowUpRight className="w-4 h-4 text-green-500" />
-                      ) : tx.type === 'PAYMENT' ? (
-                        <ArrowDownRight className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-[#B8A1D9]" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-[#5E4B8B] dark:text-white">{tx.description}</p>
-                        <p className="text-xs text-[#B8A1D9] dark:text-gray-400">
-                          {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`text-sm font-medium ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.amount > 0 ? '+' : ''}₹{tx.amount.toFixed(2)}
-                    </div>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {tx.amount > 0 ? (
+                    <ArrowUpRight className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm text-[#5E4B8B] dark:text-white truncate">
+                      {tx.description}
+                    </p>
+                    <p className="text-xs text-[#B8A1D9] dark:text-gray-400">
+                      {new Date(tx.createdAt).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-[#B8A1D9] dark:text-gray-400">No transactions yet</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+                <div
+                  className={`text-sm font-semibold flex-shrink-0 ml-2 ${
+                    tx.amount > 0 ? "text-green-600" : "text-red-500"
+                  }`}
+                >
+                  {tx.amount > 0 ? "+" : ""}
+                  {formatCurrency(tx.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
     </div>
   );
 }
+
+// BATCH_F2_APPLIED

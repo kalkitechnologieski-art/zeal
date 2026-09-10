@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import crypto from "crypto";
+import { z } from "zod";
+
+const PublishSchema = z.object({
+  channel: z.string().min(1).max(200),
+  event: z.string().min(1).max(100),
+  data: z.unknown(),
+});
+
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  if (!userId) {
+    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  }
+
+  const body = await req.json();
+  const { channel, event, data } = PublishSchema.parse(body);
+
+  const secret = process.env.APINATOR_APP_SECRET;
+  const appKey = process.env.NEXT_PUBLIC_APINATOR_APP_KEY;
+  const apiUrl = process.env.APINATOR_API_URL || "https://api.apinator.io";
+
+  if (!secret || !appKey) {
+    throw new AppError("Realtime not configured", 500, ErrorCode.CONFIG_ERROR);
+  }
+
+  // HMAC-signed server publish
+  const bodyStr = JSON.stringify({ channel, name: event, data });
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(bodyStr)
+    .digest("hex");
+
+  const res = await fetch(apiUrl + "/apps/" + appKey + "/events", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Apinator-Signature": signature,
+    },
+    body: bodyStr,
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new AppError(
+      "Realtime publish failed: " + errText,
+      502,
+      ErrorCode.INTERNAL_SERVER,
+    );
+  }
+
+  return NextResponse.json({ success: true });
+});
+
+// BATCH2_FIX_APPLIED

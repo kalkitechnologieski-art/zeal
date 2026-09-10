@@ -1,0 +1,116 @@
+// Cloudflare R2 storage adapter (S3-compatible)
+// NOTE: For production, replace inline signing with @aws-sdk/client-s3
+import type { StorageAdapter, UploadParams, UploadResult } from "./adapter";
+
+interface R2Options {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+  publicUrl: string;
+}
+
+export function createR2Adapter(options: R2Options): StorageAdapter {
+  const endpoint = "https://" + options.accountId + ".r2.cloudflarestorage.com";
+
+  async function request(
+    method: string,
+    key: string,
+    body?: BodyInit,
+    contentType?: string,
+    metadata?: Record<string, string>,
+  ): Promise<Response> {
+    const url = endpoint + "/" + options.bucket + "/" + key;
+    const headers: Record<string, string> = {
+      "x-amz-content-sha256": "UNSIGNED-PAYLOAD",
+    };
+    if (contentType) headers["Content-Type"] = contentType;
+    if (metadata) {
+      for (const k of Object.keys(metadata)) {
+        headers["x-amz-meta-" + k.toLowerCase()] = metadata[k];
+      }
+    }
+    return fetch(url, { method, headers, body });
+  }
+
+  return {
+    async upload(params: UploadParams): Promise<UploadResult> {
+      const res = await request(
+        "PUT",
+        params.key,
+        params.body as BodyInit,
+        params.contentType,
+        params.metadata,
+      );
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error("R2 upload failed: " + err);
+      }
+      return {
+        url: options.publicUrl + "/" + params.key,
+        key: params.key,
+      };
+    },
+    async delete(key) {
+      const res = await request("DELETE", key);
+      if (!res.ok && res.status !== 404) {
+        throw new Error("R2 delete failed: " + res.statusText);
+      }
+    },
+    async getSignedUrl(key, expiresIn = 3600) {
+      return options.publicUrl + "/" + key + "?expires=" + (Date.now() + expiresIn * 1000);
+    },
+    publicUrl(key) {
+      return options.publicUrl + "/" + key;
+    },
+  };
+}
+
+// BATCH1_APPLIED
+
+// ─── Legacy compatibility wrapper ─────────────────────────────────────────────
+// Used by API routes that expect a simple `uploadToR2(file, key)` function.
+export async function uploadToR2(
+  file: unknown,
+  key: string,
+): Promise<string> {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const bucket = process.env.R2_BUCKET_NAME;
+  const publicUrl = process.env.R2_PUBLIC_URL;
+
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket || !publicUrl) {
+    throw new Error("[Storage] R2 not configured – cannot upload");
+  }
+
+  const adapter = createR2Adapter({
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucket,
+    publicUrl,
+  });
+
+  let body: BodyInit;
+  let contentType = "application/octet-stream";
+
+  if (Buffer.isBuffer(file)) {
+    body = file;
+  } else if (typeof file === "string") {
+    body = file;
+  } else if (file && typeof file === "object") {
+    const f = file as { arrayBuffer?: () => Promise<ArrayBuffer>; type?: string };
+    if (typeof f.arrayBuffer === "function") {
+      body = (await f.arrayBuffer()) as unknown as BodyInit;
+    } else {
+      throw new Error("[Storage] Unsupported file type");
+    }
+    if (typeof f.type === "string") contentType = f.type;
+  } else {
+    throw new Error("[Storage] Unsupported file type");
+  }
+
+  const result = await adapter.upload({ key, body, contentType });
+  return result.url;
+}

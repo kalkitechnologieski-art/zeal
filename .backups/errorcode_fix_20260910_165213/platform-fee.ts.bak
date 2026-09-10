@@ -1,0 +1,64 @@
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { z } from "zod";
+import { redis } from "@/lib/cache";
+
+const PLATFORM_FEE_KEY = "platform_fee_percent";
+const DEFAULT_FEE = 10;
+
+const FeeSchema = z.object({
+  feePercent: z.number().min(0).max(50),
+});
+
+// ─── GET – returns current platform fee ─────────────────────────────────────
+export const GET = withErrorHandler(async () => {
+  let feePercent = DEFAULT_FEE;
+
+  try {
+    const cached = await redis.get<string>(PLATFORM_FEE_KEY);
+    if (cached !== null && cached !== undefined && typeof cached === "string") {
+      const parsed = parseFloat(cached);
+      if (!isNaN(parsed)) {
+        feePercent = parsed;
+      }
+    } else {
+      // Seed default on first read
+      try {
+        await redis.set(PLATFORM_FEE_KEY, String(DEFAULT_FEE));
+      } catch {
+        /* Best-effort */
+      }
+    }
+  } catch {
+    // Redis unavailable – use default
+  }
+
+  return NextResponse.json({ feePercent });
+});
+
+// ─── POST – update platform fee (admin only) ────────────────────────────────
+export const POST = withErrorHandler(async (req: Request) => {
+  const userId = await getUserId();
+  if (!userId) {
+    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  }
+
+  const body = await req.json();
+  const { feePercent } = FeeSchema.parse(body);
+
+  try {
+    await redis.set(PLATFORM_FEE_KEY, String(feePercent));
+  } catch {
+    throw new AppError(
+      "Cache unavailable – cannot update platform fee",
+      503,
+      ErrorCode.INTERNAL_SERVER_ERROR,
+    );
+  }
+
+  // Audit log
+  console.log(`[Admin] Platform fee updated to ${feePercent}% by ${userId}`);
+
+  return NextResponse.json({ feePercent });
+});

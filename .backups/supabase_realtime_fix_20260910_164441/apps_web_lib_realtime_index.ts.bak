@@ -1,0 +1,23 @@
+// Unified realtime export
+export * from "./adapter";
+export { createApinatorAdapter } from "./apinator";
+
+import { createApinatorAdapter } from "./apinator";
+
+let cachedAdapter: ReturnType<typeof createApinatorAdapter> | null = null;
+
+export function getRealtimeAdapter() {
+  if (cachedAdapter) return cachedAdapter;
+
+  const host = process.env.NEXT_PUBLIC_APINATOR_HOST || "wss://rt.apinator.io";
+  const appKey = process.env.NEXT_PUBLIC_APINATOR_APP_KEY || "";
+
+  if (!appKey) {
+    console.warn("[Realtime] Missing APINATOR_APP_KEY – realtime disabled");
+  }
+
+  cachedAdapter = createApinatorAdapter({ host, appKey });
+  return cachedAdapter;
+}
+
+// BATCH1_APPLIED

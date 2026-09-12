@@ -5,9 +5,6 @@ import { ServicePageClient } from "./ServicePageClient";
 import type { ConsultantProfile } from "@zeal/types";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 interface ServicePageProps {
   params: Promise<{ category: string; service: string }>;
 }
@@ -30,23 +27,35 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const service = getService(category, serviceSlug);
   if (!service) notFound();
 
-  let consultants: Awaited<ReturnType<typeof fetchConsultants>> = [];
+  const consultants = await prisma.consultant.findMany({
+    where: {
+      category: service.category as never,
+      specialties: { hasSome: service.specialties },
+      status: "VERIFIED",
+      isActive: true,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+    take: 60,
+  });
 
-  try {
-    consultants = await fetchConsultants(service);
-  } catch (err) {
-    console.error("[ServicePage] Failed to fetch consultants:", err);
-    // Fall through with empty array – page still renders with empty state
-  }
-
-  // Collect languages for filter bar
+  // Collect all unique languages for the filter bar
   const languageSet = new Set<string>();
   for (const c of consultants) {
     for (const lang of c.languages || []) languageSet.add(lang);
   }
   const languages = Array.from(languageSet).sort();
 
-  // Map to ConsultantProfile shape
+  // Map to ConsultantProfile shape expected by ConsultantCard
   const profiles: ConsultantProfile[] = consultants.map((c) => ({
     id: c.id,
     userId: c.userId,
@@ -76,43 +85,4 @@ export default async function ServicePage({ params }: ServicePageProps) {
   );
 }
 
-async function fetchConsultants(service: ReturnType<typeof getService>) {
-  if (!service) return [];
-
-  // Try exact specialties match first
-  const exactMatches = await prisma.consultant.findMany({
-    where: {
-      category: service.category as never,
-      isActive: true,
-      status: "VERIFIED",
-      specialties: { hasSome: service.specialties },
-    },
-    include: {
-      user: {
-        select: { id: true, name: true, username: true, avatar: true },
-      },
-    },
-    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
-    take: 60,
-  });
-
-  if (exactMatches.length > 0) return exactMatches;
-
-  // Fallback: any consultant in the same category
-  const categoryMatches = await prisma.consultant.findMany({
-    where: {
-      category: service.category as never,
-      isActive: true,
-      status: "VERIFIED",
-    },
-    include: {
-      user: {
-        select: { id: true, name: true, username: true, avatar: true },
-      },
-    },
-    orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
-    take: 60,
-  });
-
-  return categoryMatches;
-}
+// BATCH_F1_APPLIED

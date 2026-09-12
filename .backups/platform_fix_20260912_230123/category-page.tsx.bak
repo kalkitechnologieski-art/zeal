@@ -2,9 +2,6 @@ import Link from "next/link";
 import { getServicesByCategory } from "@/lib/services";
 import { CATEGORY_ID_TO_NAME } from "@/lib/services/slug";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 interface CategoryPageProps {
   params: Promise<{ category: string }>;
 }
@@ -65,3 +62,5 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     </div>
   );
 }
+
+// BATCH_F1_APPLIED

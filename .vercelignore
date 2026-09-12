@@ -11,6 +11,8 @@ coverage
 .env.local
 .env.*.local
 .env.production
+.env.vercel.template
+.env.vercel.required
 
 # Ignore backups and logs
 .backups
@@ -25,7 +27,7 @@ temp
 .DS_Store
 Thumbs.db
 
-# Ignore git metadata (Vercel handles this)
+# Ignore git metadata
 .git
 .gitattributes
 
@@ -36,7 +38,7 @@ __tests__
 *.spec.ts
 *.spec.tsx
 
-# Ignore documentation (not needed at runtime)
+# Ignore docs
 docs
 README.md
 DEPLOYMENT_CHECKLIST.md

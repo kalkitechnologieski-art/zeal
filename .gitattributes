@@ -33,3 +33,6 @@
 *.mp4 binary
 *.webm binary
 *.zip binary
+
+# Case-sensitive file enforcement
+apps/web/hooks/useAiConsultants.ts text eol=lf

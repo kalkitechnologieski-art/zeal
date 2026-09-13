@@ -2,121 +2,136 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
-  useCallback,
   type ReactNode,
 } from "react";
-import { useAppStore } from "@/lib/store/appStore";
+import { useAppStore, type Notification } from "@/lib/store/appStore";
 import {
   subscribeToChannel,
   disconnectAllChannels,
+  onConnectionStateChange,
+  getConnectionState,
+  type ConnectionState,
 } from "@/lib/realtime/supabase-realtime";
 
 interface RealtimeContextValue {
-  subscribe: (
+  subscribe: <T = unknown>(
     channel: string,
     event: string,
-    handler: (data: unknown) => void,
+    handler: (data: T) => void,
   ) => () => void;
+  connectionState: ConnectionState;
   isConnected: boolean;
-  connectionState: "connecting" | "connected" | "disconnected";
 }
 
 const RealtimeContext = createContext<RealtimeContextValue>({
   subscribe: () => () => {},
-  isConnected: false,
   connectionState: "disconnected",
+  isConnected: false,
 });
 
-export const useRealtimeContext = () => useContext(RealtimeContext);
+export const useRealtimeContext = (): RealtimeContextValue =>
+  useContext(RealtimeContext);
+
+const MAX_SEEN_IDS = 500;
+const TRIM_SEEN_IDS_TO = 250;
+
+interface IncomingNotificationPayload {
+  id?: string;
+  type?: string;
+  message?: string;
+  redirectUrl?: string | null;
+  actorId?: string;
+  actorName?: string | null;
+  actorAvatar?: string | null;
+}
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const { user, setWallet, addNotification } = useAppStore();
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionState, setConnectionState] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("connecting");
+  const user = useAppStore((s) => s.user);
+  const setWallet = useAppStore((s) => s.setWallet);
+  const addNotification = useAppStore((s) => s.addNotification);
 
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    () => getConnectionState(),
+  );
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
+  // Track connection lifecycle
   useEffect(() => {
-    if (!user?.id) {
-      setConnectionState("disconnected");
-      return;
-    }
+    const unsub = onConnectionStateChange(setConnectionState);
+    return unsub;
+  }, []);
 
-    setConnectionState("connecting");
-    setIsConnected(true); // Supabase handles connection internally
-    setConnectionState("connected");
+  // User-scoped subscriptions (one per channel)
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = `user:${user.id}`;
 
-    // Subscribe to user-specific notification channel
-    const unsubNotifications = subscribeToChannel(
-      `user:${user.id}`,
+    const unsubNotifications = subscribeToChannel<IncomingNotificationPayload>(
+      channel,
       "notification",
-      (data) => {
-        const payload = data as {
-          id?: string;
-          type?: string;
-          message?: string;
-          redirectUrl?: string;
-        };
-        if (payload?.message) {
-          addNotification({
-            id: payload.id || `notif-${Date.now()}`,
-            type: (payload.type as never) || "system",
-            message: payload.message,
-            redirectUrl: payload.redirectUrl || null,
-            read: false,
-            actorId: "system",
-          });
+      (payload) => {
+        if (!payload?.message) return;
+        const id = payload.id || `notif-${Date.now()}`;
+        if (seenIdsRef.current.has(id)) return;
+        seenIdsRef.current.add(id);
+        if (seenIdsRef.current.size > MAX_SEEN_IDS) {
+          const arr = Array.from(seenIdsRef.current);
+          seenIdsRef.current = new Set(arr.slice(-TRIM_SEEN_IDS_TO));
         }
+        addNotification({
+          id,
+          type: (payload.type as Notification["type"]) || "system",
+          message: payload.message,
+          redirectUrl: payload.redirectUrl ?? null,
+          read: false,
+          actorId: payload.actorId || "system",
+          actorName: payload.actorName ?? undefined,
+          actorAvatar: payload.actorAvatar ?? undefined,
+        });
       },
     );
 
-    // Subscribe to wallet updates
-    const unsubWallet = subscribeToChannel(
-      `user:${user.id}`,
+    const unsubWallet = subscribeToChannel<{ balance?: number }>(
+      channel,
       "wallet:updated",
-      (data) => {
-        const payload = data as { balance?: number };
+      (payload) => {
         if (typeof payload?.balance === "number") {
           setWallet({ balance: payload.balance } as never);
         }
       },
     );
 
-    // Subscribe to incoming call rings
-    const unsubRing = subscribeToChannel(
-      `user:${user.id}`,
-      "ring:incoming",
-      (data) => {
-        // Handled by IncomingCallOverlay via useRealtime
-        // Kept here as a no-op to keep the channel warm
-      },
-    );
-
     return () => {
       unsubNotifications();
       unsubWallet();
-      unsubRing();
-      disconnectAllChannels();
-      setIsConnected(false);
-      setConnectionState("disconnected");
     };
   }, [user?.id, setWallet, addNotification]);
 
+  // Full teardown on unmount
+  useEffect(() => {
+    return () => { disconnectAllChannels(); };
+  }, []);
+
   const subscribe = useCallback(
-    (channel: string, event: string, handler: (data: unknown) => void) => {
-      return subscribeToChannel(channel, event, handler);
-    },
+    <T,>(channel: string, event: string, handler: (data: T) => void) =>
+      subscribeToChannel<T>(channel, event, handler),
     [],
   );
 
   return (
-    <RealtimeContext.Provider value={{ subscribe, isConnected, connectionState }}>
+    <RealtimeContext.Provider
+      value={{
+        subscribe,
+        connectionState,
+        isConnected: connectionState === "connected",
+      }}
+    >
       {children}
     </RealtimeContext.Provider>
   );
 }
-
-// VERCEL_SETUP_APPLIED

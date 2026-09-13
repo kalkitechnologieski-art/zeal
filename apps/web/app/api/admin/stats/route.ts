@@ -49,4 +49,3 @@ export const GET = withErrorHandler(async () => {
   });
 });
 
-// BATCH3_APPLIED

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma, withTransaction } from "@zeal/database";
-import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+import { withErrorHandler } from "@/lib/errors";
 import { sendEmail } from "@/lib/emails";
 import { emailTemplates } from "@/lib/emails/templates";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const SyncUserSchema = z.object({
@@ -14,10 +15,13 @@ const SyncUserSchema = z.object({
 });
 
 export const POST = withErrorHandler(async (req: Request) => {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const limited = await enforceRateLimit("sync-user:" + ip, 10, 60);
+  if (limited) return limited;
+
   const body = await req.json();
   const { id, email, name, avatar, username: providedUsername } = SyncUserSchema.parse(body);
 
-  // Generate unique username
   let base = providedUsername?.trim() || email.split("@")[0] || "user";
   base = base.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "user";
   let candidate = base;
@@ -27,23 +31,18 @@ export const POST = withErrorHandler(async (req: Request) => {
     candidate = base + suffix;
   }
 
-  // Determine role
   const existingConsultant = await prisma.consultant.findUnique({
     where: { userId: id },
     select: { id: true, status: true },
   });
-
   const existingUser = await prisma.user.findUnique({
     where: { id },
     select: { role: true },
   });
 
   let role: "USER" | "CLIENT_ADMIN" | "SUPER_ADMIN" = "USER";
-  if (existingUser?.role === "SUPER_ADMIN") {
-    role = "SUPER_ADMIN";
-  } else if (existingConsultant?.status === "VERIFIED") {
-    role = "CLIENT_ADMIN";
-  }
+  if (existingUser?.role === "SUPER_ADMIN") role = "SUPER_ADMIN";
+  else if (existingConsultant?.status === "VERIFIED") role = "CLIENT_ADMIN";
 
   const { user, wallet } = await withTransaction(async (tx) => {
     const u = await tx.user.upsert({
@@ -71,14 +70,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     const w = await tx.wallet.upsert({
       where: { userId: id },
       update: {},
-      create: {
-        userId: id,
-        balance: 0,
-        escrow: 0,
-        pendingIn: 0,
-        pendingOut: 0,
-        blocked: 0,
-      },
+      create: { userId: id, balance: 0, escrow: 0, pendingIn: 0, pendingOut: 0, blocked: 0 },
     });
 
     return { user: u, wallet: w };
@@ -103,17 +95,11 @@ export const POST = withErrorHandler(async (req: Request) => {
       avatar: user.avatar,
       role: user.role,
     },
-    wallet: {
-      id: wallet.id,
-      balance: wallet.balance,
-    },
+    wallet: { id: wallet.id, balance: wallet.balance },
     redirectTo:
-      role === "SUPER_ADMIN"
-        ? "/dashboard"
-        : role === "CLIENT_ADMIN"
-        ? "/consultant/dashboard"
-        : "/dashboard",
+      role === "SUPER_ADMIN" ? "/dashboard"
+      : role === "CLIENT_ADMIN" ? "/consultant/dashboard"
+      : "/dashboard",
   });
 });
 
-// BATCH1_APPLIED

@@ -6,14 +6,7 @@ import { z } from "zod";
 
 const UpdateSchema = z.object({
   consultantId: z.string().cuid(),
-  action: z.enum([
-    "SUSPEND",
-    "REACTIVATE",
-    "FEATURE",
-    "UNFEATURE",
-    "SET_RATE",
-    "SET_SUBDOMAIN",
-  ]),
+  action: z.enum(["SUSPEND", "REACTIVATE", "FEATURE", "UNFEATURE", "SET_RATE", "SET_SUBDOMAIN"]),
   value: z.union([z.number(), z.string(), z.boolean()]).optional(),
 });
 
@@ -43,14 +36,7 @@ export const GET = withErrorHandler(async (req: Request) => {
       where,
       include: {
         user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            username: true,
-            avatar: true,
-            role: true,
-          },
+          select: { id: true, email: true, name: true, username: true, avatar: true, role: true },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -82,24 +68,12 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   let update: Record<string, unknown> = {};
   switch (action) {
-    case "SUSPEND":
-      update = { isActive: false, status: "SUSPENDED" };
-      break;
-    case "REACTIVATE":
-      update = { isActive: true, status: "VERIFIED" };
-      break;
-    case "FEATURE":
-      update = { isFeatured: true };
-      break;
-    case "UNFEATURE":
-      update = { isFeatured: false };
-      break;
-    case "SET_RATE":
-      update = { perMinuteRate: Number(value) };
-      break;
-    case "SET_SUBDOMAIN":
-      update = { subdomain: String(value), subdomainActive: true };
-      break;
+    case "SUSPEND": update = { isActive: false, status: "SUSPENDED" }; break;
+    case "REACTIVATE": update = { isActive: true, status: "VERIFIED" }; break;
+    case "FEATURE": update = { isFeatured: true }; break;
+    case "UNFEATURE": update = { isFeatured: false }; break;
+    case "SET_RATE": update = { perMinuteRate: Number(value) }; break;
+    case "SET_SUBDOMAIN": update = { subdomain: String(value), subdomainActive: true }; break;
   }
 
   const updated = await prisma.consultant.update({
@@ -118,4 +92,3 @@ export const POST = withErrorHandler(async (req: Request) => {
   return NextResponse.json({ consultant: updated });
 });
 
-// BATCH3_APPLIED

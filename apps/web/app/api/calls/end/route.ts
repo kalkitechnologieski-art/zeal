@@ -53,6 +53,11 @@ export const POST = withErrorHandler(async (req: Request) => {
     });
   }
 
+  // Guard: AI sessions have no booking
+  if (!callSession.isAI && !callSession.booking) {
+    throw new AppError("Session has no booking", 500, ErrorCode.SESSION_NOT_FOUND);
+  }
+
   const now = new Date();
   const startTime = callSession.startTime;
   const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);

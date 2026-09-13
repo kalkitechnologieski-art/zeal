@@ -12,6 +12,14 @@ export interface RealtimeNotification {
   createdAt: Date;
 }
 
+interface IncomingNotification {
+  id?: string;
+  type?: string;
+  message?: string;
+  redirectUrl?: string | null;
+  createdAt?: string;
+}
+
 export function useRealtimeNotifications(userId: string | undefined) {
   const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -31,43 +39,42 @@ export function useRealtimeNotifications(userId: string | undefined) {
       })
       .catch(() => {});
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [userId]);
 
-  // Real-time subscription
-  useRealtime(
+  // Realtime — dedupe by id
+  const handleIncoming = useCallback((payload: IncomingNotification) => {
+    if (!payload?.message) return;
+    const id = payload.id || `notif-${Date.now()}`;
+
+    setNotifications((prev) => {
+      if (prev.some((n) => n.id === id)) return prev;
+      const notif: RealtimeNotification = {
+        id,
+        type: payload.type || "system",
+        message: payload.message as string,
+        redirectUrl: payload.redirectUrl || null,
+        read: false,
+        createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
+      };
+      return [notif, ...prev];
+    });
+    setUnreadCount((prev) => prev + 1);
+
+    if (
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted" &&
+      document.visibilityState !== "visible"
+    ) {
+      try { new Notification("Zeal", { body: payload.message }); } catch { /* ignore */ }
+    }
+  }, []);
+
+  useRealtime<IncomingNotification>(
     userId ? `user:${userId}` : null,
     "notification",
-    useCallback(
-      (data: unknown) => {
-        const payload = data as Partial<RealtimeNotification>;
-        if (!payload?.message) return;
-
-        const notif: RealtimeNotification = {
-          id: payload.id || `notif-${Date.now()}`,
-          type: payload.type || "system",
-          message: payload.message,
-          redirectUrl: payload.redirectUrl || null,
-          read: false,
-          createdAt: payload.createdAt ? new Date(payload.createdAt) : new Date(),
-        };
-
-        setNotifications((prev) => [notif, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-
-        // Browser push notification
-        if (
-          typeof window !== "undefined" &&
-          "Notification" in window &&
-          Notification.permission === "granted"
-        ) {
-          new Notification("Zeal", { body: notif.message });
-        }
-      },
-      [],
-    ),
+    handleIncoming,
   );
 
   const markAsRead = useCallback(async (id: string) => {
@@ -78,7 +85,7 @@ export function useRealtimeNotifications(userId: string | undefined) {
     try {
       await fetch(`/api/notifications/${id}/read`, { method: "POST" });
     } catch (err) {
-      console.warn("[RealtimeNotifications] markAsRead failed:", err);
+      console.warn("[Notifications] markAsRead failed", err);
     }
   }, []);
 
@@ -88,11 +95,9 @@ export function useRealtimeNotifications(userId: string | undefined) {
     try {
       await fetch("/api/notifications", { method: "PUT" });
     } catch (err) {
-      console.warn("[RealtimeNotifications] markAllAsRead failed:", err);
+      console.warn("[Notifications] markAllAsRead failed", err);
     }
   }, []);
 
   return { notifications, unreadCount, markAsRead, markAllAsRead };
 }
-
-// FIX_F1_APPLIED

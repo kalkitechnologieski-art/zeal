@@ -1,47 +1,61 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { prisma } from "@zeal/database";
-import { instamojo } from "@/lib/wallet/instamojo";
 import { Ledger } from "@/lib/wallet/ledger";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+
+function verifySignature(body: string, signature: string, secret: string): boolean {
+  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  if (expected.length !== signature.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  } catch {
+    return false;
+  }
+}
 
 export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.text();
   const signature = req.headers.get("x-signature") || "";
+  const secret = process.env.INSTAMOJO_WEBHOOK_SECRET;
 
-  // Verify webhook signature
-  if (!instamojo.verifyWebhook(body, signature)) {
-    throw new AppError("Invalid webhook signature", HTTP_STATUS.UNAUTHORIZED);
+  if (!secret) {
+    throw new AppError("Instamojo webhook secret missing", 500, ErrorCode.CONFIG_ERROR);
   }
 
-  const payload = JSON.parse(body);
+  if (!verifySignature(body, signature, secret)) {
+    return NextResponse.json({ received: true, ignored: "bad-signature" });
+  }
+
+  let payload: { payment_request_id?: string; payment_status?: string; amount?: string | number };
+  try { payload = JSON.parse(body); } catch { return NextResponse.json({ received: true }); }
+
   const { payment_request_id, payment_status, amount } = payload;
 
-  if (payment_status === "Credit") {
-    // Find the pending transaction using the payment request ID as reference
+  if (payment_status === "Credit" && payment_request_id) {
     const pendingTx = await prisma.transaction.findFirst({
-      where: {
-        referenceId: payment_request_id,
-        type: "TOPUP",
-      },
+      where: { referenceId: payment_request_id, type: "TOPUP" },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!pendingTx) {
-      // If no pending transaction found, we may have already processed it or it's invalid.
-      // Log and return success (idempotent).
-      console.warn(`No pending transaction found for payment_request_id: ${payment_request_id}`);
+      console.warn("[Instamojo] No pending tx for " + payment_request_id);
       return NextResponse.json({ received: true });
     }
 
-    // Credit the wallet using the immutable ledger
+    const creditRef = "instamojo:" + payment_request_id;
+    const alreadyCredited = await Ledger.getByReferenceId(creditRef);
+    if (alreadyCredited) return NextResponse.json({ received: true, ignored: "already-credited" });
+
     await Ledger.createTransaction({
       walletId: pendingTx.walletId,
       type: "TOPUP",
-      amount: Number(amount),
-      description: `Instamojo payment ${payment_request_id}`,
-      referenceId: payment_request_id,
+      amount: Number(amount || 0),
+      description: "Instamojo payment " + payment_request_id,
+      referenceId: creditRef,
     });
   }
 
-  // Always respond with 200 OK to acknowledge receipt
   return NextResponse.json({ received: true });
 });
+

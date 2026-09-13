@@ -18,9 +18,7 @@ export const GET = withErrorHandler(async (req: Request) => {
       where,
       include: {
         user: { select: { id: true, name: true, email: true } },
-        consultant: {
-          include: { user: { select: { id: true, name: true } } },
-        },
+        consultant: { include: { user: { select: { id: true, name: true } } } },
       },
       orderBy: { scheduledAt: "desc" },
       skip: (page - 1) * limit,
@@ -35,4 +33,3 @@ export const GET = withErrorHandler(async (req: Request) => {
   });
 });
 
-// BATCH3_APPLIED

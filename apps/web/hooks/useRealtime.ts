@@ -1,25 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRealtimeContext } from "@/components/providers/RealtimeProvider";
+import { useEffect, useRef } from "react";
+import {
+  useRealtimeContext,
+} from "@/components/providers/RealtimeProvider";
+import type { ConnectionState } from "@/lib/realtime/supabase-realtime";
 
-export function useRealtime(
+/**
+ * Subscribe to a realtime channel event.
+ * Handler is stored in a ref so changing it does not re-subscribe.
+ */
+export function useRealtime<T = unknown>(
   channel: string | null,
   event: string,
-  handler: (data: unknown) => void,
+  handler: (data: T) => void,
 ): void {
   const { subscribe } = useRealtimeContext();
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
 
   useEffect(() => {
     if (!channel) return;
-    const unsub = subscribe(channel, event, handler);
+    const unsub = subscribe<T>(channel, event, (data) => handlerRef.current(data));
     return unsub;
-  }, [channel, event, handler, subscribe]);
+  }, [channel, event, subscribe]);
 }
 
-export function useRealtimeConnection(): boolean {
-  const { isConnected } = useRealtimeContext();
-  return isConnected;
+export interface RealtimeConnectionInfo {
+  isConnected: boolean;
+  connectionState: ConnectionState;
 }
 
-// VERCEL_SETUP_APPLIED
+export function useRealtimeConnection(): RealtimeConnectionInfo {
+  const { isConnected, connectionState } = useRealtimeContext();
+  return { isConnected, connectionState };
+}

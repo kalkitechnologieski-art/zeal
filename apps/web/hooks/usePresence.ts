@@ -1,22 +1,46 @@
-'use client';
-import { useEffect } from 'react';
-import { useAppStore } from '@/lib/store/appStore';
-import { useSocket } from './useSocket';
+"use client";
 
-export function usePresence() {
-  const { setOnline, isOnline } = useAppStore();
-  const socket = useSocket();
+import { useEffect, useState } from "react";
+import { subscribeToPresence } from "@/lib/realtime/supabase-realtime";
+
+interface PresenceState {
+  [key: string]: Array<{ online_at: string }>;
+}
+
+export interface PresenceInfo {
+  onlineUsers: Set<string>;
+  isOnline: (id: string) => boolean;
+  count: number;
+}
+
+export function usePresence(
+  roomId: string | null,
+  userId: string | undefined,
+): PresenceInfo {
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!socket) return;
-    // Listen for online users updates
-    socket.on('presence', (data: { online: boolean }) => {
-      setOnline(data.online);
-    });
-    return () => {
-      socket.off('presence');
-    };
-  }, [socket, setOnline]);
+    if (!roomId || !userId) return;
 
-  return { isOnline };
+    const unsub = subscribeToPresence<PresenceState>(
+      `presence:${roomId}`,
+      userId,
+      (state) => {
+        try {
+          const ids = new Set(Object.keys(state || {}));
+          setOnlineUsers(ids);
+        } catch (e) {
+          console.warn("[Presence] state parse failed", e);
+        }
+      },
+    );
+
+    return unsub;
+  }, [roomId, userId]);
+
+  return {
+    onlineUsers,
+    isOnline: (id: string) => onlineUsers.has(id),
+    count: onlineUsers.size,
+  };
 }

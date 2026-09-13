@@ -59,32 +59,23 @@ export const POST = withErrorHandler(async (req: Request) => {
     proposedStart.getTime() + durationMinutes * 60_000,
   );
 
-  const conflict = await prisma.booking.findFirst({
-    where: {
-      consultantId,
-      status: { in: ["PENDING", "CONFIRMED", "IN_PROGRESS"] },
-      scheduledAt: { lt: proposedEnd },
-      AND: [
-        {
-          scheduledAt: {
-            gte: new Date(proposedStart.getTime() - 4 * 60 * 60_000),
-          },
-        },
-      ],
-    },
-  });
+  const conflict = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM "Booking"
+    WHERE "consultantId" = ${consultantId}
+      AND status IN ('PENDING','CONFIRMED','IN_PROGRESS')
+      AND tstzrange(
+        "scheduledAt",
+        "scheduledAt" + ("durationMinutes" || ' minutes')::interval
+      ) && tstzrange(${proposedStart}::timestamptz, ${proposedEnd}::timestamptz)
+    LIMIT 1
+  `;
 
-  if (conflict) {
-    const conflictEnd = new Date(
-      conflict.scheduledAt.getTime() + conflict.durationMinutes * 60_000,
+  if (conflict.length > 0) {
+    throw new AppError(
+      "Time slot already booked",
+      409,
+      ErrorCode.BOOKING_CONFLICT,
     );
-    if (proposedStart < conflictEnd && proposedEnd > conflict.scheduledAt) {
-      throw new AppError(
-        "Time slot already booked",
-        409,
-        ErrorCode.BOOKING_CONFLICT,
-      );
-    }
   }
 
   // ─── Wallet check ──────────────────────────────────────────────────────────

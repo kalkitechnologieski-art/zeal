@@ -41,9 +41,7 @@ export const GET = withErrorHandler(async (req: Request) => {
         isVerified: true,
         sparks: true,
         createdAt: true,
-        _count: {
-          select: { bookings: true, posts: true, callSessions: true },
-        },
+        _count: { select: { bookings: true, posts: true, callSessions: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
@@ -74,23 +72,12 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   let update: Record<string, unknown> = {};
   switch (action) {
-    case "VERIFY":
-      update = { isVerified: true };
-      break;
-    case "UNVERIFY":
-      update = { isVerified: false };
-      break;
-    case "PROMOTE_ADMIN":
-      update = { role: "SUPER_ADMIN" };
-      break;
-    case "DEMOTE":
-      update = { role: "USER" };
-      break;
+    case "VERIFY": update = { isVerified: true }; break;
+    case "UNVERIFY": update = { isVerified: false }; break;
+    case "PROMOTE_ADMIN": update = { role: "SUPER_ADMIN" }; break;
+    case "DEMOTE": update = { role: "USER" }; break;
     case "BAN":
-    case "UNBAN":
-      // Banning stored in metadata / separate flag; use isVerified as placeholder
-      update = { isVerified: false };
-      break;
+    case "UNBAN": update = { isVerified: false }; break;
   }
 
   const user = await prisma.user.update({
@@ -109,4 +96,3 @@ export const POST = withErrorHandler(async (req: Request) => {
   return NextResponse.json({ user, action });
 });
 
-// BATCH3_APPLIED

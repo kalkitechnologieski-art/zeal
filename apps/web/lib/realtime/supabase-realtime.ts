@@ -1,22 +1,82 @@
 "use client";
 
-/**
- * Supabase Realtime client wrapper.
- *
- * Why Supabase Realtime (not Apinator/Centrifugo):
- *   • Vercel Hobby cannot run persistent WebSocket servers.
- *   • Supabase Realtime uses WebSocket from browser → Supabase directly,
- *     bypassing Vercel entirely.
- *   • Free tier: 200 concurrent connections, 2M messages/month.
- *   • Built on top of Postgres changes + broadcast + presence.
- *
- * Docs: https://supabase.com/docs/guides/realtime
- */
+import {
+  createClient,
+  type RealtimeChannel,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
-import { createClient, type RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "reconnecting";
+
+export type RealtimeHandler<T = unknown> = (payload: T) => void;
+
+interface ChannelEntry {
+  channel: RealtimeChannel;
+  listeners: Map<string, Set<RealtimeHandler>>;
+  subscribePromise?: Promise<void>;
+}
+
+interface ConnectionMetrics {
+  reconnects: number;
+  lastConnectedAt: number | null;
+  lastDisconnectedAt: number | null;
+}
+
+// ─── Module state ─────────────────────────────────────────────────────────────
 
 let client: SupabaseClient | null = null;
-const channels = new Map<string, RealtimeChannel>();
+const channels = new Map<string, ChannelEntry>();
+const stateListeners = new Set<(s: ConnectionState) => void>();
+let currentState: ConnectionState = "disconnected";
+let reconnectAttempt = 0;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+const metrics: ConnectionMetrics = {
+  reconnects: 0,
+  lastConnectedAt: null,
+  lastDisconnectedAt: null,
+};
+
+const MAX_RECONNECT_ATTEMPTS = 10;
+const BASE_BACKOFF_MS = 500;
+const MAX_BACKOFF_MS = 30_000;
+const JITTER_FACTOR = 0.3;
+
+// ─── State emitters ───────────────────────────────────────────────────────────
+
+function setState(next: ConnectionState): void {
+  if (next === currentState) return;
+  currentState = next;
+  if (next === "connected") metrics.lastConnectedAt = Date.now();
+  if (next === "disconnected") metrics.lastDisconnectedAt = Date.now();
+  for (const fn of stateListeners) {
+    try { fn(next); } catch (e) { console.warn("[Realtime] state listener error", e); }
+  }
+}
+
+export function onConnectionStateChange(
+  fn: (s: ConnectionState) => void,
+): () => void {
+  stateListeners.add(fn);
+  fn(currentState);
+  return () => { stateListeners.delete(fn); };
+}
+
+export function getConnectionState(): ConnectionState {
+  return currentState;
+}
+
+export function getConnectionMetrics(): Readonly<ConnectionMetrics> {
+  return { ...metrics };
+}
+
+// ─── Client factory ───────────────────────────────────────────────────────────
 
 export function getSupabaseRealtimeClient(): SupabaseClient | null {
   if (client) return client;
@@ -25,7 +85,9 @@ export function getSupabaseRealtimeClient(): SupabaseClient | null {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) {
-    console.warn("[SupabaseRealtime] Missing env vars – realtime disabled");
+    console.warn(
+      "[Realtime] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — realtime disabled",
+    );
     return null;
   }
 
@@ -36,122 +98,212 @@ export function getSupabaseRealtimeClient(): SupabaseClient | null {
       detectSessionInUrl: false,
     },
     realtime: {
-      params: {
-        eventsPerSecond: 10,
-      },
+      params: { eventsPerSecond: 20 },
+      timeout: 20_000,
+    },
+    global: {
+      headers: { "x-application-name": "zeal-web" },
     },
   });
+
+  setState("connecting");
 
   return client;
 }
 
-export type RealtimeHandler = (data: unknown) => void;
+// ─── Reconnect with exponential backoff + jitter ──────────────────────────────
 
-/**
- * Subscribe to a Supabase broadcast channel.
- * Automatically handles reconnection via Supabase client internals.
- */
-export function subscribeToChannel(
+function scheduleReconnect(): void {
+  if (reconnectTimer) return;
+  if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+    console.warn("[Realtime] Max reconnect attempts reached");
+    setState("disconnected");
+    return;
+  }
+
+  reconnectAttempt++;
+  metrics.reconnects++;
+
+  const base = Math.min(BASE_BACKOFF_MS * Math.pow(2, reconnectAttempt - 1), MAX_BACKOFF_MS);
+  const jitter = base * JITTER_FACTOR * (Math.random() * 2 - 1);
+  const delay = Math.max(100, Math.round(base + jitter));
+
+  setState("reconnecting");
+
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    if (!client) return;
+    // Supabase handles internal reconnection; re-subscribe all known channels.
+    for (const entry of channels.values()) {
+      try { entry.channel.subscribe(); } catch (e) { console.warn("[Realtime] resubscribe failed", e); }
+    }
+  }, delay);
+}
+
+// ─── Broadcast subscription (dedupe by channel + event) ───────────────────────
+
+export function subscribeToChannel<T = unknown>(
   channelName: string,
   eventName: string,
-  handler: RealtimeHandler,
+  handler: RealtimeHandler<T>,
 ): () => void {
   const sb = getSupabaseRealtimeClient();
   if (!sb) return () => {};
 
-  let channel = channels.get(channelName);
-  if (!channel) {
-    channel = sb.channel(channelName, {
+  let entry = channels.get(channelName);
+  if (!entry) {
+    const channel = sb.channel(channelName, {
       config: {
         broadcast: { self: false, ack: false },
         presence: { key: "" },
       },
     });
-    channel.subscribe((status) => {
-      if (status === "CHANNEL_ERROR") {
-        console.warn(`[SupabaseRealtime] Channel error: ${channelName}`);
-      }
-    });
-    channels.set(channelName, channel);
+    entry = { channel, listeners: new Map() };
+    channels.set(channelName, entry);
   }
 
-  channel.on("broadcast", { event: eventName }, (payload) => {
-    handler(payload.payload);
-  });
+  // Ensure one .on per event — subsequent subscribers share it
+  let set = entry.listeners.get(eventName);
+  if (!set) {
+    set = new Set<RealtimeHandler>();
+    entry.listeners.set(eventName, set);
+
+    entry.channel.on("broadcast", { event: eventName }, (payload) => {
+      const handlers = entry!.listeners.get(eventName);
+      if (!handlers || handlers.size === 0) return;
+      for (const fn of handlers) {
+        try { (fn as RealtimeHandler)(payload.payload); }
+        catch (e) { console.error("[Realtime] handler error on " + channelName + ":" + eventName, e); }
+      }
+    });
+  }
+  set.add(handler as RealtimeHandler);
+
+  // Subscribe channel once
+  if (!entry.subscribePromise) {
+    entry.subscribePromise = new Promise<void>((resolve) => {
+      entry!.channel.subscribe((status: string) => {
+        if (status === "SUBSCRIBED") {
+          setState("connected");
+          resolve();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn("[Realtime] channel " + channelName + " status: " + status);
+          setState("reconnecting");
+          scheduleReconnect();
+        }
+      });
+    });
+  }
 
   return () => {
-    const ch = channels.get(channelName);
-    if (ch) {
-      try {
-        ch.unsubscribe();
-      } catch (err) {
-        console.warn(`[SupabaseRealtime] Unsubscribe error:`, err);
-      }
+    const e = channels.get(channelName);
+    if (!e) return;
+    const s = e.listeners.get(eventName);
+    if (s) {
+      s.delete(handler as RealtimeHandler);
+      if (s.size === 0) e.listeners.delete(eventName);
+    }
+    // Fully unsubscribe when no listeners remain
+    if (e.listeners.size === 0) {
+      try { e.channel.unsubscribe(); } catch { /* ignore */ }
       channels.delete(channelName);
     }
   };
 }
 
-/**
- * Publish a broadcast event to a channel (client → client).
- */
-export async function publishToChannel(
-  channelName: string,
-  eventName: string,
-  data: unknown,
-): Promise<void> {
-  const sb = getSupabaseRealtimeClient();
-  if (!sb) return;
+// ─── Postgres changes subscription (RLS-aware) ────────────────────────────────
 
-  let channel = channels.get(channelName);
-  if (!channel) {
-    channel = sb.channel(channelName);
-    await channel.subscribe();
-    channels.set(channelName, channel);
-  }
-
-  await channel.send({
-    type: "broadcast",
-    event: eventName,
-    payload: data,
-  });
-}
-
-/**
- * Subscribe to Postgres changes on a table (RLS-aware).
- */
-export function subscribeToPostgresChanges(
+export function subscribeToPostgresChanges<T = unknown>(
   table: string,
   filter: string,
-  handler: RealtimeHandler,
+  handler: RealtimeHandler<T>,
 ): () => void {
   const sb = getSupabaseRealtimeClient();
   if (!sb) return () => {};
 
-  const channelName = `db:${table}:${filter}`;
+  const channelName = "pg:" + table + ":" + filter;
   const channel = sb
     .channel(channelName)
     .on(
-      "postgres_changes",
+      "postgres_changes" as never,
       { event: "*", schema: "public", table, filter },
-      (payload) => handler(payload.new),
+      (payload: unknown) => {
+        try { handler(payload as T); }
+        catch (e) { console.error("[Realtime] pg handler error", e); }
+      },
     )
     .subscribe();
 
   return () => {
-    channel.unsubscribe();
+    try { channel.unsubscribe(); } catch { /* ignore */ }
   };
 }
 
-export function disconnectAllChannels(): void {
-  for (const [name, channel] of channels.entries()) {
-    try {
-      channel.unsubscribe();
-    } catch (err) {
-      console.warn(`[SupabaseRealtime] Failed to unsubscribe ${name}:`, err);
+// ─── Presence ─────────────────────────────────────────────────────────────────
+
+export function subscribeToPresence<T = unknown>(
+  channelName: string,
+  key: string,
+  handler: (state: T) => void,
+): () => void {
+  const sb = getSupabaseRealtimeClient();
+  if (!sb) return () => {};
+
+  const channel = sb.channel(channelName, {
+    config: { presence: { key } },
+  });
+
+  channel.on("presence", { event: "sync" }, () => {
+    try { handler(channel.presenceState() as T); }
+    catch (e) { console.error("[Realtime] presence handler error", e); }
+  });
+
+  channel.subscribe(async (status: string) => {
+    if (status === "SUBSCRIBED") {
+      try { await channel.track({ online_at: new Date().toISOString() }); }
+      catch (e) { console.warn("[Realtime] presence track failed", e); }
     }
-  }
-  channels.clear();
+  });
+
+  return () => {
+    try { channel.unsubscribe(); } catch { /* ignore */ }
+  };
 }
 
-// SUPABASE_REALTIME_FIX_APPLIED
+// ─── Client-side publish ──────────────────────────────────────────────────────
+
+export async function publishToChannel(
+  channelName: string,
+  eventName: string,
+  data: unknown,
+): Promise<boolean> {
+  const sb = getSupabaseRealtimeClient();
+  if (!sb) return false;
+
+  const channel = sb.channel(channelName);
+  await channel.subscribe();
+  try {
+    const res = await channel.send({ type: "broadcast", event: eventName, payload: data });
+    return res === "ok";
+  } catch (e) {
+    console.warn("[Realtime] publish failed", e);
+    return false;
+  } finally {
+    try { await sb.removeChannel(channel); } catch { /* ignore */ }
+  }
+}
+
+// ─── Teardown ─────────────────────────────────────────────────────────────────
+
+export function disconnectAllChannels(): void {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  for (const [name, entry] of channels.entries()) {
+    try { entry.channel.unsubscribe(); }
+    catch (e) { console.warn("[Realtime] unsub " + name + " failed", e); }
+  }
+  channels.clear();
+  setState("disconnected");
+}

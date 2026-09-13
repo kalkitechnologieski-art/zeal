@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -248,6 +247,36 @@ model AIConsultant {
   updatedAt         DateTime @updatedAt
 
   callSessions      CallSession[]
+}
+
+
+model Conversation {
+  id              String        @id @default(cuid())
+  userAId         String
+  userBId         String
+  lastMessageAt   DateTime      @default(now())
+  lastMessageText String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  messages        ChatMessage[]
+
+  @@unique([userAId, userBId])
+  @@index([userAId, lastMessageAt(sort: Desc)])
+  @@index([userBId, lastMessageAt(sort: Desc)])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
 }
 
 enum Role {

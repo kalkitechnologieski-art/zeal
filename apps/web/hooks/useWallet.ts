@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { useAppStore } from "@/lib/store/appStore";
 import { useRealtime } from "./useRealtime";
 
 export function useWallet() {
-  const { wallet, setWallet } = useAppStore();
+  const wallet = useAppStore((s) => s.wallet);
+  const setWallet = useAppStore((s) => s.setWallet);
+  const user = useAppStore((s) => s.user);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -19,18 +20,21 @@ export function useWallet() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    if (data?.wallet) setWallet(data.wallet);
-  }, [data, setWallet]);
+  if (data?.wallet && !wallet) {
+    setWallet(data.wallet);
+  }
 
-  // Real-time wallet updates
-  useRealtime("user:wallet", "wallet:updated", (event) => {
-    const payload = event as { balance?: number };
-    if (typeof payload.balance === "number") {
-      setWallet({ balance: payload.balance } as never);
-      queryClient.invalidateQueries({ queryKey: ["wallet"] });
-    }
-  });
+  // Realtime — channel name MUST match server publish target
+  useRealtime<{ balance?: number }>(
+    user?.id ? `user:${user.id}` : null,
+    "wallet:updated",
+    (payload) => {
+      if (typeof payload?.balance === "number") {
+        setWallet({ balance: payload.balance } as never);
+        queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      }
+    },
+  );
 
   const topUp = useMutation({
     mutationFn: async (amount: number) => {
@@ -66,5 +70,3 @@ export function useWallet() {
     transactionsLoading: transactionsQuery.isLoading,
   };
 }
-
-// BATCH_F1_APPLIED

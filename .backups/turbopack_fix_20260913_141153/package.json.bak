@@ -4,13 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "prebuild": "cd ../../packages/database && npx prisma generate",
-    "vercel-build": "npm run prebuild && npm run build",
-    "build:turbo": "next build"
+    "vercel-build": "npm run prebuild && npm run build"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.22",

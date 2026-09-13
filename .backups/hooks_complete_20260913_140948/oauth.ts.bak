@@ -1,0 +1,45 @@
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+
+export interface GoogleSignInOptions {
+  /** Where to send the user after successful auth (defaults to /dashboard) */
+  redirectTo?: string;
+}
+
+/**
+ * Initiate Google OAuth via Supabase.
+ * Supabase redirects back to /auth/callback with a code that the callback
+ * page exchanges for a session.
+ */
+export async function signInWithGoogle(options: GoogleSignInOptions = {}) {
+  const supabase = createClient();
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  const callbackUrl = `${baseUrl}/auth/callback${
+    options.redirectTo ? `?redirect=${encodeURIComponent(options.redirectTo)}` : ""
+  }`;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: callbackUrl,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/** Sign out and clear session */
+export async function signOut() {
+  const supabase = createClient();
+  return supabase.auth.signOut();
+}

@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Sparkles, Zap, Star, Loader2, AlertCircle,
+  ArrowLeft, Sparkles, Zap, Clock, Star, MessageCircle,
 } from "lucide-react";
 import { Button, Badge, Card, CardContent } from "@zeal/ui";
 import Link from "next/link";
@@ -19,32 +19,20 @@ export default function AIAstrologerDetailPage() {
 
   useEffect(() => {
     if (!params.id) return;
-    let cancelled = false;
-
-    fetch(`/api/ai/consultants/${params.id}`, { cache: "no-store" })
+    fetch(`/api/ai/consultants/${params.id}`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
-      .then((data) => {
-        if (!cancelled) setAi(data);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .then(setAi)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [params.id]);
 
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-[#9D7DC5]" />
+        <div className="w-8 h-8 border-4 border-[#9D7DC5] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -52,12 +40,8 @@ export default function AIAstrologerDetailPage() {
   if (error || !ai) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
         <p className="text-red-500">{error || "AI consultant not found"}</p>
-        <Link
-          href="/ai-astrologers"
-          className="text-[#9D7DC5] hover:underline mt-2 inline-block"
-        >
+        <Link href="/ai-astrologers" className="text-[#9D7DC5] hover:underline mt-2 inline-block">
           ← Back to AI Consultants
         </Link>
       </div>
@@ -85,13 +69,13 @@ export default function AIAstrologerDetailPage() {
       <Card className="border-[#E1C5E7] dark:border-gray-700">
         <CardContent className="pt-6">
           <div className="flex flex-col items-center text-center">
-            <div className="relative w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#9D7DC5]/30">
+            <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-[#9D7DC5] to-[#533AFD] flex items-center justify-center text-white text-4xl font-bold overflow-hidden">
               <img
                 src={ai.avatar}
                 alt={ai.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full rounded-full object-cover"
               />
-              <span className="absolute top-1 right-1 px-1.5 py-0.5 bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white text-[8px] font-bold rounded-full">
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-[#533AFD] text-white text-[8px] font-bold rounded-full">
                 AI
               </span>
             </div>

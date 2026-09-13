@@ -12,7 +12,7 @@ import { Mail, Lock, ArrowRight, Sparkles, Shield } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 // Fallback in case env var is missing at build time
-const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "https://zeal-web.vercel.app/admin/login";
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "/admin";
 
 export default function LoginPage() {
   const router = useRouter();

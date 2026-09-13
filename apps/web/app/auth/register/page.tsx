@@ -11,7 +11,7 @@ import { Mail, Lock, User, ArrowRight, Sparkles, Shield } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "https://zeal-web.vercel.app/admin/login";
+const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "/admin";
 
 export default function RegisterPage() {
   const router = useRouter();

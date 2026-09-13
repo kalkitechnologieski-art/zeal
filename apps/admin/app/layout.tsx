@@ -1,5 +1,6 @@
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SupabaseAuthProvider } from "@/components/providers/SupabaseAuthProvider";
+import { RealtimeProvider } from "@/components/providers/RealtimeProvider";
 import { QueryProvider } from "@/lib/query/provider";
 import "./globals.css";
 
@@ -25,7 +26,9 @@ export default function RootLayout({
         >
           <QueryProvider>
             <SupabaseAuthProvider>
+            <RealtimeProvider>
               {children}
+            </RealtimeProvider>
             </SupabaseAuthProvider>
           </QueryProvider>
         </ThemeProvider>

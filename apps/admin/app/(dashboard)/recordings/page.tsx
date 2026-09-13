@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 function RecordingsContent() {
   const { profile } = useAdminStore();
   const queryClient = useQueryClient();
-  const isSuper = profile?.role === 'super_admin';
+  const isSuper = profile?.role === 'SUPER_ADMIN';
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['admin', 'recordings'],

@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 function WalletContent() {
   const { profile } = useAdminStore();
   const queryClient = useQueryClient();
-  const isSuper = profile?.role === 'super_admin';
+  const isSuper = profile?.role === 'SUPER_ADMIN';
   const [amount, setAmount] = useState(100);
 
   const { data, isLoading, error, refetch } = useQuery({

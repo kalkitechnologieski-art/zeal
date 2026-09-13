@@ -1,43 +1,66 @@
+# ═══════════════════════════════════════════════════════════════════════════
 # Dependencies
+# ═══════════════════════════════════════════════════════════════════════════
 node_modules/
 apps/*/node_modules/
 packages/*/node_modules/
 
+# ═══════════════════════════════════════════════════════════════════════════
 # Build outputs
+# ═══════════════════════════════════════════════════════════════════════════
 dist/
-.next/
-out/
 build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
 
-# Environment files
+# ═══════════════════════════════════════════════════════════════════════════
+# Environment — NEVER commit secrets
+# ═══════════════════════════════════════════════════════════════════════════
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.*.template
+.env.local.backup
+.env.vercel.required
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Local backups and exports
+# ═══════════════════════════════════════════════════════════════════════════
+.backups/
+backups/
+zeal-export-*.txt
+zeal-repo-export*.txt
+project-zeal-full-export.txt
+audit-report*.txt
+ts-errors*.txt
+eslint-output.txt
+env-vars.txt
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Logs
+# ═══════════════════════════════════════════════════════════════════════════
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# OS files
+# ═══════════════════════════════════════════════════════════════════════════
+# OS / IDE
+# ═══════════════════════════════════════════════════════════════════════════
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Temporary files
-*.tmp
-*.temp
 nul
 NUL
-project-zeal-full-export.txt
-.env.production
-.env.production.template
 
-# local backups (never commit)
-.backups/
+# ═══════════════════════════════════════════════════════════════════════════
+# Prisma
+# ═══════════════════════════════════════════════════════════════════════════
+packages/database/prisma/*.db
+packages/database/prisma/*.db-journal

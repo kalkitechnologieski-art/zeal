@@ -1,0 +1,914 @@
+/d/zeal/.env.example	
+874	/d/zeal/.env.example
+/d/zeal/.env.local	
+2198	/d/zeal/.env.local
+/d/zeal/.env.local.backup	
+312	/d/zeal/.env.local.backup
+/d/zeal/.env.local.bak	
+1332	/d/zeal/.env.local.bak
+/d/zeal/.env.production	
+1332	/d/zeal/.env.production
+/d/zeal/.env.production.template	
+1635	/d/zeal/.env.production.template
+/d/zeal/.env.vercel.required	
+4906	/d/zeal/.env.vercel.required
+/d/zeal/.env.vercel.template	
+4014	/d/zeal/.env.vercel.template
+/d/zeal/.gitattributes	
+742	/d/zeal/.gitattributes
+/d/zeal/.github/workflows/ci.yml	
+1862	/d/zeal/.github/workflows/ci.yml
+/d/zeal/.github/workflows/deploy.yml	
+928	/d/zeal/.github/workflows/deploy.yml
+/d/zeal/.gitignore	
+405	/d/zeal/.gitignore
+/d/zeal/.npmrc	
+39	/d/zeal/.npmrc
+/d/zeal/apps/admin/.env.local	
+158	/d/zeal/apps/admin/.env.local
+/d/zeal/apps/admin/.env.local.example	
+423	/d/zeal/apps/admin/.env.local.example
+/d/zeal/apps/admin/app/(auth)/login/page.tsx	
+3841	/d/zeal/apps/admin/app/(auth)/login/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/ai-consultants/page.tsx	
+6447	/d/zeal/apps/admin/app/(dashboard)/ai-consultants/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/analytics/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/analytics/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/bookings/page.tsx	
+9144	/d/zeal/apps/admin/app/(dashboard)/bookings/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/broadcast/page.tsx	
+3926	/d/zeal/apps/admin/app/(dashboard)/broadcast/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/calls/page.tsx	
+1408	/d/zeal/apps/admin/app/(dashboard)/calls/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/clients/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/clients/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/consultants/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/consultants/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/content/page.tsx	
+2835	/d/zeal/apps/admin/app/(dashboard)/content/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/dashboard/page.tsx	
+3093	/d/zeal/apps/admin/app/(dashboard)/dashboard/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/earnings/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/earnings/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/finance/page.tsx	
+79	/d/zeal/apps/admin/app/(dashboard)/finance/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/healers/page.tsx	
+3923	/d/zeal/apps/admin/app/(dashboard)/healers/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/layout.tsx	
+1499	/d/zeal/apps/admin/app/(dashboard)/layout.tsx
+/d/zeal/apps/admin/app/(dashboard)/platform-fee/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/platform-fee/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/recordings/page.tsx	
+4797	/d/zeal/apps/admin/app/(dashboard)/recordings/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/settings/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/settings/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/users/page.tsx	
+1283	/d/zeal/apps/admin/app/(dashboard)/users/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/verification/page.tsx	
+7996	/d/zeal/apps/admin/app/(dashboard)/verification/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/wallet/page.tsx	
+5733	/d/zeal/apps/admin/app/(dashboard)/wallet/page.tsx
+/d/zeal/apps/admin/app/(dashboard)/withdrawals/page.tsx	
+4582	/d/zeal/apps/admin/app/(dashboard)/withdrawals/page.tsx
+/d/zeal/apps/admin/app/api/admin/ai-consultants/route.ts	
+624	/d/zeal/apps/admin/app/api/admin/ai-consultants/route.ts
+/d/zeal/apps/admin/app/consultant/dashboard/page.tsx	
+3141	/d/zeal/apps/admin/app/consultant/dashboard/page.tsx
+/d/zeal/apps/admin/app/global-error.tsx	
+891	/d/zeal/apps/admin/app/global-error.tsx
+/d/zeal/apps/admin/app/globals.css	
+2178	/d/zeal/apps/admin/app/globals.css
+/d/zeal/apps/admin/app/layout.tsx	
+1122	/d/zeal/apps/admin/app/layout.tsx
+/d/zeal/apps/admin/app/loading.tsx	
+491	/d/zeal/apps/admin/app/loading.tsx
+/d/zeal/apps/admin/app/page.tsx	
+912	/d/zeal/apps/admin/app/page.tsx
+/d/zeal/apps/admin/components/alerts/IncomingAlert.tsx	
+65	/d/zeal/apps/admin/components/alerts/IncomingAlert.tsx
+/d/zeal/apps/admin/components/alerts/IncomingAlertOverlay.tsx	
+4273	/d/zeal/apps/admin/components/alerts/IncomingAlertOverlay.tsx
+/d/zeal/apps/admin/components/dashboard/RecentActivity.tsx	
+1521	/d/zeal/apps/admin/components/dashboard/RecentActivity.tsx
+/d/zeal/apps/admin/components/dashboard/RevenueChart.tsx	
+1347	/d/zeal/apps/admin/components/dashboard/RevenueChart.tsx
+/d/zeal/apps/admin/components/dashboard/StatsCard.tsx	
+1293	/d/zeal/apps/admin/components/dashboard/StatsCard.tsx
+/d/zeal/apps/admin/components/layout/AdminSidebar.tsx	
+4213	/d/zeal/apps/admin/components/layout/AdminSidebar.tsx
+/d/zeal/apps/admin/components/layout/AdminTopBar.tsx	
+1089	/d/zeal/apps/admin/components/layout/AdminTopBar.tsx
+/d/zeal/apps/admin/components/notifications/NotificationBell.tsx	
+3697	/d/zeal/apps/admin/components/notifications/NotificationBell.tsx
+/d/zeal/apps/admin/components/providers/RealtimeProvider.tsx	
+2357	/d/zeal/apps/admin/components/providers/RealtimeProvider.tsx
+/d/zeal/apps/admin/components/providers/SupabaseAuthProvider.tsx	
+1692	/d/zeal/apps/admin/components/providers/SupabaseAuthProvider.tsx
+/d/zeal/apps/admin/components/providers/ThemeProvider.tsx	
+288	/d/zeal/apps/admin/components/providers/ThemeProvider.tsx
+/d/zeal/apps/admin/components/shared/EmptyState.tsx	
+928	/d/zeal/apps/admin/components/shared/EmptyState.tsx
+/d/zeal/apps/admin/components/shared/ErrorBoundary.tsx	
+2554	/d/zeal/apps/admin/components/shared/ErrorBoundary.tsx
+/d/zeal/apps/admin/components/shared/LoadingSkeleton.tsx	
+2677	/d/zeal/apps/admin/components/shared/LoadingSkeleton.tsx
+/d/zeal/apps/admin/components/shared/LoadingState.tsx	
+631	/d/zeal/apps/admin/components/shared/LoadingState.tsx
+/d/zeal/apps/admin/components/shared/NotificationBell.tsx	
+3697	/d/zeal/apps/admin/components/shared/NotificationBell.tsx
+/d/zeal/apps/admin/components/ui/button.tsx	
+3240	/d/zeal/apps/admin/components/ui/button.tsx
+/d/zeal/apps/admin/components/ui/toaster.tsx	
+2503	/d/zeal/apps/admin/components/ui/toaster.tsx
+/d/zeal/apps/admin/components.json	
+325	/d/zeal/apps/admin/components.json
+/d/zeal/apps/admin/hooks/useAdminData.ts	
+1153	/d/zeal/apps/admin/hooks/useAdminData.ts
+/d/zeal/apps/admin/hooks/useAdminSocket.ts	
+2601	/d/zeal/apps/admin/hooks/useAdminSocket.ts
+/d/zeal/apps/admin/hooks/useWebSocket.ts	
+1046	/d/zeal/apps/admin/hooks/useWebSocket.ts
+/d/zeal/apps/admin/lib/auth/client.ts	
+219	/d/zeal/apps/admin/lib/auth/client.ts
+/d/zeal/apps/admin/lib/auth/index.ts	
+52	/d/zeal/apps/admin/lib/auth/index.ts
+/d/zeal/apps/admin/lib/auth/server.ts	
+255	/d/zeal/apps/admin/lib/auth/server.ts
+/d/zeal/apps/admin/lib/query/client.ts	
+261	/d/zeal/apps/admin/lib/query/client.ts
+/d/zeal/apps/admin/lib/query/provider.tsx	
+330	/d/zeal/apps/admin/lib/query/provider.tsx
+/d/zeal/apps/admin/lib/realtime/supabase-realtime.ts	
+1763	/d/zeal/apps/admin/lib/realtime/supabase-realtime.ts
+/d/zeal/apps/admin/lib/socket/client.ts	
+1638	/d/zeal/apps/admin/lib/socket/client.ts
+/d/zeal/apps/admin/lib/store/adminStore.ts	
+4254	/d/zeal/apps/admin/lib/store/adminStore.ts
+/d/zeal/apps/admin/lib/supabase/client.ts	
+904	/d/zeal/apps/admin/lib/supabase/client.ts
+/d/zeal/apps/admin/lib/supabase/middleware.ts	
+270	/d/zeal/apps/admin/lib/supabase/middleware.ts
+/d/zeal/apps/admin/lib/supabase/server.ts	
+684	/d/zeal/apps/admin/lib/supabase/server.ts
+/d/zeal/apps/admin/lib/utils.ts	
+169	/d/zeal/apps/admin/lib/utils.ts
+/d/zeal/apps/admin/lib/websocket-client.ts	
+2243	/d/zeal/apps/admin/lib/websocket-client.ts
+/d/zeal/apps/admin/next-env.d.ts	
+253	/d/zeal/apps/admin/next-env.d.ts
+/d/zeal/apps/admin/next.config.js	
+366	/d/zeal/apps/admin/next.config.js
+/d/zeal/apps/admin/package.json	
+1132	/d/zeal/apps/admin/package.json
+/d/zeal/apps/admin/postcss.config.js	
+69	/d/zeal/apps/admin/postcss.config.js
+/d/zeal/apps/admin/proxy.ts	
+1897	/d/zeal/apps/admin/proxy.ts
+/d/zeal/apps/admin/tailwind.config.js	
+1598	/d/zeal/apps/admin/tailwind.config.js
+/d/zeal/apps/admin/tsconfig.json	
+232	/d/zeal/apps/admin/tsconfig.json
+/d/zeal/apps/api/package.json	
+442	/d/zeal/apps/api/package.json
+/d/zeal/apps/api/src/main.ts	
+372	/d/zeal/apps/api/src/main.ts
+/d/zeal/apps/api/tsconfig.json	
+181	/d/zeal/apps/api/tsconfig.json
+/d/zeal/apps/web/.env.local	
+158	/d/zeal/apps/web/.env.local
+/d/zeal/apps/web/app/(app)/chat/ChatClient.tsx	
+6760	/d/zeal/apps/web/app/(app)/chat/ChatClient.tsx
+/d/zeal/apps/web/app/admin/login/page.tsx	
+199	/d/zeal/apps/web/app/admin/login/page.tsx
+/d/zeal/apps/web/app/admin/page.tsx	
+579	/d/zeal/apps/web/app/admin/page.tsx
+/d/zeal/apps/web/app/ai-astrologers/page.tsx	
+3663	/d/zeal/apps/web/app/ai-astrologers/page.tsx
+/d/zeal/apps/web/app/ai-astrologers/[id]/page.tsx	
+5206	/d/zeal/apps/web/app/ai-astrologers/[id]/page.tsx
+/d/zeal/apps/web/app/api/admin/bookings/route.ts	
+1148	/d/zeal/apps/web/app/api/admin/bookings/route.ts
+/d/zeal/apps/web/app/api/admin/broadcast/route.ts	
+1112	/d/zeal/apps/web/app/api/admin/broadcast/route.ts
+/d/zeal/apps/web/app/api/admin/consultants/route.ts	
+3232	/d/zeal/apps/web/app/api/admin/consultants/route.ts
+/d/zeal/apps/web/app/api/admin/platform-fee/route.ts	
+2079	/d/zeal/apps/web/app/api/admin/platform-fee/route.ts
+/d/zeal/apps/web/app/api/admin/stats/route.ts	
+1578	/d/zeal/apps/web/app/api/admin/stats/route.ts
+/d/zeal/apps/web/app/api/admin/users/route.ts	
+3006	/d/zeal/apps/web/app/api/admin/users/route.ts
+/d/zeal/apps/web/app/api/admin/verification/route.ts	
+4101	/d/zeal/apps/web/app/api/admin/verification/route.ts
+/d/zeal/apps/web/app/api/admin/withdrawals/route.ts	
+2874	/d/zeal/apps/web/app/api/admin/withdrawals/route.ts
+/d/zeal/apps/web/app/api/ai/astrologers/route.ts	
+774	/d/zeal/apps/web/app/api/ai/astrologers/route.ts
+/d/zeal/apps/web/app/api/ai/chat/end/route.ts	
+2595	/d/zeal/apps/web/app/api/ai/chat/end/route.ts
+/d/zeal/apps/web/app/api/ai/chat/message/route.ts	
+1620	/d/zeal/apps/web/app/api/ai/chat/message/route.ts
+/d/zeal/apps/web/app/api/ai/chat/route.ts	
+688	/d/zeal/apps/web/app/api/ai/chat/route.ts
+/d/zeal/apps/web/app/api/ai/chat/start/route.ts	
+1516	/d/zeal/apps/web/app/api/ai/chat/start/route.ts
+/d/zeal/apps/web/app/api/ai/consultants/route.ts	
+2521	/d/zeal/apps/web/app/api/ai/consultants/route.ts
+/d/zeal/apps/web/app/api/ai/consultants/[id]/route.ts	
+1231	/d/zeal/apps/web/app/api/ai/consultants/[id]/route.ts
+/d/zeal/apps/web/app/api/ai/horoscope/route.ts	
+1242	/d/zeal/apps/web/app/api/ai/horoscope/route.ts
+/d/zeal/apps/web/app/api/ai/kundali/route.ts	
+1592	/d/zeal/apps/web/app/api/ai/kundali/route.ts
+/d/zeal/apps/web/app/api/ai/numerology/route.ts	
+1652	/d/zeal/apps/web/app/api/ai/numerology/route.ts
+/d/zeal/apps/web/app/api/ai/palmistry/route.ts	
+1170	/d/zeal/apps/web/app/api/ai/palmistry/route.ts
+/d/zeal/apps/web/app/api/ai/tarot/route.ts	
+1590	/d/zeal/apps/web/app/api/ai/tarot/route.ts
+/d/zeal/apps/web/app/api/auth/sync-user/route.ts	
+3127	/d/zeal/apps/web/app/api/auth/sync-user/route.ts
+/d/zeal/apps/web/app/api/bazaar/listings/route.ts	
+1515	/d/zeal/apps/web/app/api/bazaar/listings/route.ts
+/d/zeal/apps/web/app/api/bookings/availability/route.ts	
+1989	/d/zeal/apps/web/app/api/bookings/availability/route.ts
+/d/zeal/apps/web/app/api/bookings/route.ts	
+7063	/d/zeal/apps/web/app/api/bookings/route.ts
+/d/zeal/apps/web/app/api/bookings/[id]/cancel/route.ts	
+2390	/d/zeal/apps/web/app/api/bookings/[id]/cancel/route.ts
+/d/zeal/apps/web/app/api/bookings/[id]/confirm/route.ts	
+1907	/d/zeal/apps/web/app/api/bookings/[id]/confirm/route.ts
+/d/zeal/apps/web/app/api/bookings/[id]/route.ts	
+1756	/d/zeal/apps/web/app/api/bookings/[id]/route.ts
+/d/zeal/apps/web/app/api/calls/end/route.ts	
+4571	/d/zeal/apps/web/app/api/calls/end/route.ts
+/d/zeal/apps/web/app/api/calls/recording/route.ts	
+897	/d/zeal/apps/web/app/api/calls/recording/route.ts
+/d/zeal/apps/web/app/api/calls/start/route.ts	
+2123	/d/zeal/apps/web/app/api/calls/start/route.ts
+/d/zeal/apps/web/app/api/calls/token/route.ts	
+1618	/d/zeal/apps/web/app/api/calls/token/route.ts
+/d/zeal/apps/web/app/api/calls/[id]/route.ts	
+1163	/d/zeal/apps/web/app/api/calls/[id]/route.ts
+/d/zeal/apps/web/app/api/consultant/availability/route.ts	
+1940	/d/zeal/apps/web/app/api/consultant/availability/route.ts
+/d/zeal/apps/web/app/api/consultant/clients/route.ts	
+2119	/d/zeal/apps/web/app/api/consultant/clients/route.ts
+/d/zeal/apps/web/app/api/consultant/earnings/route.ts	
+3432	/d/zeal/apps/web/app/api/consultant/earnings/route.ts
+/d/zeal/apps/web/app/api/consultant/onboarding/route.ts	
+3671	/d/zeal/apps/web/app/api/consultant/onboarding/route.ts
+/d/zeal/apps/web/app/api/consultant/pulse/route.ts	
+2161	/d/zeal/apps/web/app/api/consultant/pulse/route.ts
+/d/zeal/apps/web/app/api/cron/reminders/route.ts	
+1518	/d/zeal/apps/web/app/api/cron/reminders/route.ts
+/d/zeal/apps/web/app/api/debug/ai-consultants/route.ts	
+1954	/d/zeal/apps/web/app/api/debug/ai-consultants/route.ts
+/d/zeal/apps/web/app/api/debug/log/route.ts	
+961	/d/zeal/apps/web/app/api/debug/log/route.ts
+/d/zeal/apps/web/app/api/example/route.ts	
+617	/d/zeal/apps/web/app/api/example/route.ts
+/d/zeal/apps/web/app/api/explore/consultants/route.ts	
+1848	/d/zeal/apps/web/app/api/explore/consultants/route.ts
+/d/zeal/apps/web/app/api/explore/search/route.ts	
+2444	/d/zeal/apps/web/app/api/explore/search/route.ts
+/d/zeal/apps/web/app/api/explore/trending/route.ts	
+299	/d/zeal/apps/web/app/api/explore/trending/route.ts
+/d/zeal/apps/web/app/api/health/route.ts	
+2217	/d/zeal/apps/web/app/api/health/route.ts
+/d/zeal/apps/web/app/api/meetings/token/route.ts	
+1375	/d/zeal/apps/web/app/api/meetings/token/route.ts
+/d/zeal/apps/web/app/api/notifications/read-all/route.ts	
+473	/d/zeal/apps/web/app/api/notifications/read-all/route.ts
+/d/zeal/apps/web/app/api/notifications/route.ts	
+1381	/d/zeal/apps/web/app/api/notifications/route.ts
+/d/zeal/apps/web/app/api/notifications/[id]/read/route.ts	
+590	/d/zeal/apps/web/app/api/notifications/[id]/read/route.ts
+/d/zeal/apps/web/app/api/payments/create-order/route.ts	
+1117	/d/zeal/apps/web/app/api/payments/create-order/route.ts
+/d/zeal/apps/web/app/api/payments/verify/route.ts	
+1013	/d/zeal/apps/web/app/api/payments/verify/route.ts
+/d/zeal/apps/web/app/api/posts/create/route.ts	
+2589	/d/zeal/apps/web/app/api/posts/create/route.ts
+/d/zeal/apps/web/app/api/posts/feed/route.ts	
+1460	/d/zeal/apps/web/app/api/posts/feed/route.ts
+/d/zeal/apps/web/app/api/quests/progress/route.ts	
+841	/d/zeal/apps/web/app/api/quests/progress/route.ts
+/d/zeal/apps/web/app/api/quests/route.ts	
+1010	/d/zeal/apps/web/app/api/quests/route.ts
+/d/zeal/apps/web/app/api/quests/[questId]/complete/route.ts	
+487	/d/zeal/apps/web/app/api/quests/[questId]/complete/route.ts
+/d/zeal/apps/web/app/api/realtime/publish/route.ts	
+1313	/d/zeal/apps/web/app/api/realtime/publish/route.ts
+/d/zeal/apps/web/app/api/realtime/token/route.ts	
+1030	/d/zeal/apps/web/app/api/realtime/token/route.ts
+/d/zeal/apps/web/app/api/referral/[userId]/route.ts	
+411	/d/zeal/apps/web/app/api/referral/[userId]/route.ts
+/d/zeal/apps/web/app/api/socket/route.ts	
+340	/d/zeal/apps/web/app/api/socket/route.ts
+/d/zeal/apps/web/app/api/sparks/feed/route.ts	
+1471	/d/zeal/apps/web/app/api/sparks/feed/route.ts
+/d/zeal/apps/web/app/api/trpc/[trpc]/route.ts	
+369	/d/zeal/apps/web/app/api/trpc/[trpc]/route.ts
+/d/zeal/apps/web/app/api/upload/route.ts	
+2044	/d/zeal/apps/web/app/api/upload/route.ts
+/d/zeal/apps/web/app/api/users/[userId]/posts/route.ts	
+536	/d/zeal/apps/web/app/api/users/[userId]/posts/route.ts
+/d/zeal/apps/web/app/api/users/[userId]/profile/route.ts	
+4475	/d/zeal/apps/web/app/api/users/[userId]/profile/route.ts
+/d/zeal/apps/web/app/api/wallet/balance/route.ts	
+764	/d/zeal/apps/web/app/api/wallet/balance/route.ts
+/d/zeal/apps/web/app/api/wallet/topup/route.ts	
+1740	/d/zeal/apps/web/app/api/wallet/topup/route.ts
+/d/zeal/apps/web/app/api/wallet/transactions/route.ts	
+1101	/d/zeal/apps/web/app/api/wallet/transactions/route.ts
+/d/zeal/apps/web/app/api/wallet/webhooks/instamojo/route.ts	
+1664	/d/zeal/apps/web/app/api/wallet/webhooks/instamojo/route.ts
+/d/zeal/apps/web/app/api/wallet/webhooks/razorpay/route.ts	
+2771	/d/zeal/apps/web/app/api/wallet/webhooks/razorpay/route.ts
+/d/zeal/apps/web/app/api/zeal/categories/route.ts	
+2849	/d/zeal/apps/web/app/api/zeal/categories/route.ts
+/d/zeal/apps/web/app/api/zeal/chat/route.ts	
+4122	/d/zeal/apps/web/app/api/zeal/chat/route.ts
+/d/zeal/apps/web/app/auth/callback/page.tsx	
+2739	/d/zeal/apps/web/app/auth/callback/page.tsx
+/d/zeal/apps/web/app/auth/layout.tsx	
+150	/d/zeal/apps/web/app/auth/layout.tsx
+/d/zeal/apps/web/app/auth/login/page.tsx	
+8578	/d/zeal/apps/web/app/auth/login/page.tsx
+/d/zeal/apps/web/app/auth/register/page.tsx	
+10644	/d/zeal/apps/web/app/auth/register/page.tsx
+/d/zeal/apps/web/app/bazaar/page.tsx	
+2078	/d/zeal/apps/web/app/bazaar/page.tsx
+/d/zeal/apps/web/app/booking/page.tsx	
+1991	/d/zeal/apps/web/app/booking/page.tsx
+/d/zeal/apps/web/app/bookings/page.tsx	
+2891	/d/zeal/apps/web/app/bookings/page.tsx
+/d/zeal/apps/web/app/call/[bookingId]/page.tsx	
+3545	/d/zeal/apps/web/app/call/[bookingId]/page.tsx
+/d/zeal/apps/web/app/chat/page.tsx	
+1911	/d/zeal/apps/web/app/chat/page.tsx
+/d/zeal/apps/web/app/chat/[id]/page.tsx	
+2985	/d/zeal/apps/web/app/chat/[id]/page.tsx
+/d/zeal/apps/web/app/consultant/availability/page.tsx	
+7034	/d/zeal/apps/web/app/consultant/availability/page.tsx
+/d/zeal/apps/web/app/consultant/bookings/page.tsx	
+2660	/d/zeal/apps/web/app/consultant/bookings/page.tsx
+/d/zeal/apps/web/app/consultant/clients/page.tsx	
+3645	/d/zeal/apps/web/app/consultant/clients/page.tsx
+/d/zeal/apps/web/app/consultant/dashboard/page.tsx	
+2875	/d/zeal/apps/web/app/consultant/dashboard/page.tsx
+/d/zeal/apps/web/app/consultant/earnings/page.tsx	
+5939	/d/zeal/apps/web/app/consultant/earnings/page.tsx
+/d/zeal/apps/web/app/consultant/layout.tsx	
+1908	/d/zeal/apps/web/app/consultant/layout.tsx
+/d/zeal/apps/web/app/consultant/onboarding/page.tsx	
+11770	/d/zeal/apps/web/app/consultant/onboarding/page.tsx
+/d/zeal/apps/web/app/consultant/pending/page.tsx	
+931	/d/zeal/apps/web/app/consultant/pending/page.tsx
+/d/zeal/apps/web/app/consultant/settings/page.tsx	
+4969	/d/zeal/apps/web/app/consultant/settings/page.tsx
+/d/zeal/apps/web/app/consultant/white-label/page.tsx	
+7192	/d/zeal/apps/web/app/consultant/white-label/page.tsx
+/d/zeal/apps/web/app/consultant/[id]/page.tsx	
+904	/d/zeal/apps/web/app/consultant/[id]/page.tsx
+/d/zeal/apps/web/app/create/page.tsx	
+4558	/d/zeal/apps/web/app/create/page.tsx
+/d/zeal/apps/web/app/dashboard/page.tsx	
+4661	/d/zeal/apps/web/app/dashboard/page.tsx
+/d/zeal/apps/web/app/debug/page.tsx	
+9459	/d/zeal/apps/web/app/debug/page.tsx
+/d/zeal/apps/web/app/error.tsx	
+1269	/d/zeal/apps/web/app/error.tsx
+/d/zeal/apps/web/app/explore/page.tsx	
+6881	/d/zeal/apps/web/app/explore/page.tsx
+/d/zeal/apps/web/app/global-error.tsx	
+2601	/d/zeal/apps/web/app/global-error.tsx
+/d/zeal/apps/web/app/globals.css	
+15902	/d/zeal/apps/web/app/globals.css
+/d/zeal/apps/web/app/HomeClient.tsx	
+1364	/d/zeal/apps/web/app/HomeClient.tsx
+/d/zeal/apps/web/app/layout.tsx	
+1849	/d/zeal/apps/web/app/layout.tsx
+/d/zeal/apps/web/app/loading.tsx	
+611	/d/zeal/apps/web/app/loading.tsx
+/d/zeal/apps/web/app/not-found.tsx	
+1299	/d/zeal/apps/web/app/not-found.tsx
+/d/zeal/apps/web/app/notifications/page.tsx	
+6561	/d/zeal/apps/web/app/notifications/page.tsx
+/d/zeal/apps/web/app/page.tsx	
+110	/d/zeal/apps/web/app/page.tsx
+/d/zeal/apps/web/app/payment/failure/page.tsx	
+1200	/d/zeal/apps/web/app/payment/failure/page.tsx
+/d/zeal/apps/web/app/payment/success/page.tsx	
+1244	/d/zeal/apps/web/app/payment/success/page.tsx
+/d/zeal/apps/web/app/profile/edit/page.tsx	
+6331	/d/zeal/apps/web/app/profile/edit/page.tsx
+/d/zeal/apps/web/app/profile/page.tsx	
+5389	/d/zeal/apps/web/app/profile/page.tsx
+/d/zeal/apps/web/app/quests/page.tsx	
+4202	/d/zeal/apps/web/app/quests/page.tsx
+/d/zeal/apps/web/app/referral/page.tsx	
+1071	/d/zeal/apps/web/app/referral/page.tsx
+/d/zeal/apps/web/app/services/horoscope/page.tsx	
+2254	/d/zeal/apps/web/app/services/horoscope/page.tsx
+/d/zeal/apps/web/app/services/kundali/page.tsx	
+2235	/d/zeal/apps/web/app/services/kundali/page.tsx
+/d/zeal/apps/web/app/services/matchmaking/page.tsx	
+2635	/d/zeal/apps/web/app/services/matchmaking/page.tsx
+/d/zeal/apps/web/app/services/numerology/page.tsx	
+2249	/d/zeal/apps/web/app/services/numerology/page.tsx
+/d/zeal/apps/web/app/services/page.tsx	
+404	/d/zeal/apps/web/app/services/page.tsx
+/d/zeal/apps/web/app/services/palmistry/page.tsx	
+2244	/d/zeal/apps/web/app/services/palmistry/page.tsx
+/d/zeal/apps/web/app/services/tarot/page.tsx	
+2227	/d/zeal/apps/web/app/services/tarot/page.tsx
+/d/zeal/apps/web/app/services/ZealHubClient.tsx	
+3996	/d/zeal/apps/web/app/services/ZealHubClient.tsx
+/d/zeal/apps/web/app/services/[category]/page.tsx	
+2208	/d/zeal/apps/web/app/services/[category]/page.tsx
+/d/zeal/apps/web/app/services/[category]/[service]/page.tsx	
+5562	/d/zeal/apps/web/app/services/[category]/[service]/page.tsx
+/d/zeal/apps/web/app/services/[category]/[service]/ServicePageClient.tsx	
+3999	/d/zeal/apps/web/app/services/[category]/[service]/ServicePageClient.tsx
+/d/zeal/apps/web/app/sparks/page.tsx	
+7675	/d/zeal/apps/web/app/sparks/page.tsx
+/d/zeal/apps/web/app/wallet/page.tsx	
+8199	/d/zeal/apps/web/app/wallet/page.tsx
+/d/zeal/apps/web/app/white-label/[subdomain]/book/page.tsx	
+1327	/d/zeal/apps/web/app/white-label/[subdomain]/book/page.tsx
+/d/zeal/apps/web/app/white-label/[subdomain]/layout.tsx	
+2899	/d/zeal/apps/web/app/white-label/[subdomain]/layout.tsx
+/d/zeal/apps/web/app/white-label/[subdomain]/page.tsx	
+2510	/d/zeal/apps/web/app/white-label/[subdomain]/page.tsx
+/d/zeal/apps/web/app/white-label/[subdomain]/services/page.tsx	
+1700	/d/zeal/apps/web/app/white-label/[subdomain]/services/page.tsx
+/d/zeal/apps/web/components/ai-assistant/AIAssistant.tsx	
+3913	/d/zeal/apps/web/components/ai-assistant/AIAssistant.tsx
+/d/zeal/apps/web/components/bazaar/BazaarListing.tsx	
+3059	/d/zeal/apps/web/components/bazaar/BazaarListing.tsx
+/d/zeal/apps/web/components/billing/PerMinuteBilling.tsx	
+2928	/d/zeal/apps/web/components/billing/PerMinuteBilling.tsx
+/d/zeal/apps/web/components/booking/BookingWizard.tsx	
+11902	/d/zeal/apps/web/components/booking/BookingWizard.tsx
+/d/zeal/apps/web/components/booking/SlotPicker.tsx	
+3960	/d/zeal/apps/web/components/booking/SlotPicker.tsx
+/d/zeal/apps/web/components/bookings/BookingCard.tsx	
+5926	/d/zeal/apps/web/components/bookings/BookingCard.tsx
+/d/zeal/apps/web/components/call/AudioCall.tsx	
+5458	/d/zeal/apps/web/components/call/AudioCall.tsx
+/d/zeal/apps/web/components/call/CallInterface.tsx	
+7726	/d/zeal/apps/web/components/call/CallInterface.tsx
+/d/zeal/apps/web/components/call/IncomingCallOverlay.tsx	
+4195	/d/zeal/apps/web/components/call/IncomingCallOverlay.tsx
+/d/zeal/apps/web/components/call/SessionTimer.tsx	
+1436	/d/zeal/apps/web/components/call/SessionTimer.tsx
+/d/zeal/apps/web/components/chat/ChatList.tsx	
+2765	/d/zeal/apps/web/components/chat/ChatList.tsx
+/d/zeal/apps/web/components/chat/ChatWindow.tsx	
+12609	/d/zeal/apps/web/components/chat/ChatWindow.tsx
+/d/zeal/apps/web/components/chat/MessageBubble.tsx	
+1238	/d/zeal/apps/web/components/chat/MessageBubble.tsx
+/d/zeal/apps/web/components/consultant/PendingRequests.tsx	
+2001	/d/zeal/apps/web/components/consultant/PendingRequests.tsx
+/d/zeal/apps/web/components/consultant/PulseStats.tsx	
+2619	/d/zeal/apps/web/components/consultant/PulseStats.tsx
+/d/zeal/apps/web/components/consultant/TodaySchedule.tsx	
+3686	/d/zeal/apps/web/components/consultant/TodaySchedule.tsx
+/d/zeal/apps/web/components/consultant/WorkspaceSidebar.tsx	
+6879	/d/zeal/apps/web/components/consultant/WorkspaceSidebar.tsx
+/d/zeal/apps/web/components/feed/Feed.tsx	
+2211	/d/zeal/apps/web/components/feed/Feed.tsx
+/d/zeal/apps/web/components/feed/PostCard.tsx	
+3288	/d/zeal/apps/web/components/feed/PostCard.tsx
+/d/zeal/apps/web/components/home/CategoryPills.tsx	
+2177	/d/zeal/apps/web/components/home/CategoryPills.tsx
+/d/zeal/apps/web/components/home/CategorySection.tsx	
+837	/d/zeal/apps/web/components/home/CategorySection.tsx
+/d/zeal/apps/web/components/home/ConsultantCarousel.tsx	
+2088	/d/zeal/apps/web/components/home/ConsultantCarousel.tsx
+/d/zeal/apps/web/components/home/HeroSection.tsx	
+2273	/d/zeal/apps/web/components/home/HeroSection.tsx
+/d/zeal/apps/web/components/home/HeroSlider.tsx	
+6502	/d/zeal/apps/web/components/home/HeroSlider.tsx
+/d/zeal/apps/web/components/home/ServiceCard.tsx	
+1620	/d/zeal/apps/web/components/home/ServiceCard.tsx
+/d/zeal/apps/web/components/icons/index.tsx	
+1973	/d/zeal/apps/web/components/icons/index.tsx
+/d/zeal/apps/web/components/layout/BottomNav.tsx	
+4702	/d/zeal/apps/web/components/layout/BottomNav.tsx
+/d/zeal/apps/web/components/layout/TopBar.tsx	
+3118	/d/zeal/apps/web/components/layout/TopBar.tsx
+/d/zeal/apps/web/components/motion/index.ts	
+127	/d/zeal/apps/web/components/motion/index.ts
+/d/zeal/apps/web/components/motion/MotionWrapper.tsx	
+390	/d/zeal/apps/web/components/motion/MotionWrapper.tsx
+/d/zeal/apps/web/components/notifications/NotificationBell.tsx	
+4392	/d/zeal/apps/web/components/notifications/NotificationBell.tsx
+/d/zeal/apps/web/components/payments/RazorpayButton.tsx	
+3636	/d/zeal/apps/web/components/payments/RazorpayButton.tsx
+/d/zeal/apps/web/components/profile/ActionButtons.tsx	
+1605	/d/zeal/apps/web/components/profile/ActionButtons.tsx
+/d/zeal/apps/web/components/profile/BookingModal.tsx	
+5201	/d/zeal/apps/web/components/profile/BookingModal.tsx
+/d/zeal/apps/web/components/profile/PostGrid.tsx	
+2158	/d/zeal/apps/web/components/profile/PostGrid.tsx
+/d/zeal/apps/web/components/providers/LoggingProvider.tsx	
+1083	/d/zeal/apps/web/components/providers/LoggingProvider.tsx
+/d/zeal/apps/web/components/providers/RealtimeProvider.tsx	
+3213	/d/zeal/apps/web/components/providers/RealtimeProvider.tsx
+/d/zeal/apps/web/components/providers/SupabaseAuthProvider.tsx	
+1692	/d/zeal/apps/web/components/providers/SupabaseAuthProvider.tsx
+/d/zeal/apps/web/components/providers/ThemeProvider.tsx	
+288	/d/zeal/apps/web/components/providers/ThemeProvider.tsx
+/d/zeal/apps/web/components/quests/QuestCard.tsx	
+2897	/d/zeal/apps/web/components/quests/QuestCard.tsx
+/d/zeal/apps/web/components/referral/ReferralCard.tsx	
+2331	/d/zeal/apps/web/components/referral/ReferralCard.tsx
+/d/zeal/apps/web/components/services/ConsultantGrid.tsx	
+1158	/d/zeal/apps/web/components/services/ConsultantGrid.tsx
+/d/zeal/apps/web/components/services/ServiceFilterBar.tsx	
+4520	/d/zeal/apps/web/components/services/ServiceFilterBar.tsx
+/d/zeal/apps/web/components/services/ServiceHero.tsx	
+1366	/d/zeal/apps/web/components/services/ServiceHero.tsx
+/d/zeal/apps/web/components/services/ServiceLayout.tsx	
+1195	/d/zeal/apps/web/components/services/ServiceLayout.tsx
+/d/zeal/apps/web/components/shared/ConsultantCard.tsx	
+7084	/d/zeal/apps/web/components/shared/ConsultantCard.tsx
+/d/zeal/apps/web/components/shared/ConsultantProfile.tsx	
+2703	/d/zeal/apps/web/components/shared/ConsultantProfile.tsx
+/d/zeal/apps/web/components/shared/EmptyState.tsx	
+1096	/d/zeal/apps/web/components/shared/EmptyState.tsx
+/d/zeal/apps/web/components/shared/FollowButton.tsx	
+1305	/d/zeal/apps/web/components/shared/FollowButton.tsx
+/d/zeal/apps/web/components/shared/ScrollReveal.tsx	
+709	/d/zeal/apps/web/components/shared/ScrollReveal.tsx
+/d/zeal/apps/web/components/shared/SeeAllLink.tsx	
+965	/d/zeal/apps/web/components/shared/SeeAllLink.tsx
+/d/zeal/apps/web/components/shared/ServiceCard.tsx	
+1600	/d/zeal/apps/web/components/shared/ServiceCard.tsx
+/d/zeal/apps/web/components/ui/button.tsx	
+3240	/d/zeal/apps/web/components/ui/button.tsx
+/d/zeal/apps/web/components/ui/Motion.tsx	
+850	/d/zeal/apps/web/components/ui/Motion.tsx
+/d/zeal/apps/web/components/ui/toaster.tsx	
+2503	/d/zeal/apps/web/components/ui/toaster.tsx
+/d/zeal/apps/web/components/zeal/CategoryAccordion.tsx	
+18847	/d/zeal/apps/web/components/zeal/CategoryAccordion.tsx
+/d/zeal/apps/web/components/zeal/ServiceCard.tsx	
+1764	/d/zeal/apps/web/components/zeal/ServiceCard.tsx
+/d/zeal/apps/web/components/zeal/ZealChat.tsx	
+6239	/d/zeal/apps/web/components/zeal/ZealChat.tsx
+/d/zeal/apps/web/components.json	
+325	/d/zeal/apps/web/components.json
+/d/zeal/apps/web/hooks/useAiConsultants.ts	
+4093	/d/zeal/apps/web/hooks/useAiConsultants.ts
+/d/zeal/apps/web/hooks/useBooking.ts	
+1776	/d/zeal/apps/web/hooks/useBooking.ts
+/d/zeal/apps/web/hooks/useCall.ts	
+2690	/d/zeal/apps/web/hooks/useCall.ts
+/d/zeal/apps/web/hooks/useConsultants.ts	
+2662	/d/zeal/apps/web/hooks/useConsultants.ts
+/d/zeal/apps/web/hooks/useDebounce.ts	
+328	/d/zeal/apps/web/hooks/useDebounce.ts
+/d/zeal/apps/web/hooks/useFeed.ts	
+654	/d/zeal/apps/web/hooks/useFeed.ts
+/d/zeal/apps/web/hooks/useLoggedRealtime.ts	
+2273	/d/zeal/apps/web/hooks/useLoggedRealtime.ts
+/d/zeal/apps/web/hooks/useNotifications.ts	
+961	/d/zeal/apps/web/hooks/useNotifications.ts
+/d/zeal/apps/web/hooks/usePresence.ts	
+545	/d/zeal/apps/web/hooks/usePresence.ts
+/d/zeal/apps/web/hooks/useRazorpay.ts	
+1897	/d/zeal/apps/web/hooks/useRazorpay.ts
+/d/zeal/apps/web/hooks/useRealtime.ts	
+607	/d/zeal/apps/web/hooks/useRealtime.ts
+/d/zeal/apps/web/hooks/useRealtimeNotifications.ts	
+2801	/d/zeal/apps/web/hooks/useRealtimeNotifications.ts
+/d/zeal/apps/web/hooks/useScrollReveal.ts	
+851	/d/zeal/apps/web/hooks/useScrollReveal.ts
+/d/zeal/apps/web/hooks/useSessionBilling.ts	
+1143	/d/zeal/apps/web/hooks/useSessionBilling.ts
+/d/zeal/apps/web/hooks/useSocket.ts	
+855	/d/zeal/apps/web/hooks/useSocket.ts
+/d/zeal/apps/web/hooks/useSupabaseAuth.ts	
+127	/d/zeal/apps/web/hooks/useSupabaseAuth.ts
+/d/zeal/apps/web/hooks/useWallet.ts	
+1991	/d/zeal/apps/web/hooks/useWallet.ts
+/d/zeal/apps/web/hooks/useWebSocket.ts	
+972	/d/zeal/apps/web/hooks/useWebSocket.ts
+/d/zeal/apps/web/lib/ai/ai-chat.ts	
+2492	/d/zeal/apps/web/lib/ai/ai-chat.ts
+/d/zeal/apps/web/lib/api-error-handler.ts	
+1496	/d/zeal/apps/web/lib/api-error-handler.ts
+/d/zeal/apps/web/lib/auth/admin.ts	
+1272	/d/zeal/apps/web/lib/auth/admin.ts
+/d/zeal/apps/web/lib/auth/client.ts	
+624	/d/zeal/apps/web/lib/auth/client.ts
+/d/zeal/apps/web/lib/auth/index.ts	
+52	/d/zeal/apps/web/lib/auth/index.ts
+/d/zeal/apps/web/lib/auth/oauth.ts	
+899	/d/zeal/apps/web/lib/auth/oauth.ts
+/d/zeal/apps/web/lib/auth/server.ts	
+1854	/d/zeal/apps/web/lib/auth/server.ts
+/d/zeal/apps/web/lib/cache.ts	
+2631	/d/zeal/apps/web/lib/cache.ts
+/d/zeal/apps/web/lib/calls/adapter.ts	
+491	/d/zeal/apps/web/lib/calls/adapter.ts
+/d/zeal/apps/web/lib/calls/billing.ts	
+3302	/d/zeal/apps/web/lib/calls/billing.ts
+/d/zeal/apps/web/lib/calls/index.ts	
+1508	/d/zeal/apps/web/lib/calls/index.ts
+/d/zeal/apps/web/lib/calls/metered.ts	
+1494	/d/zeal/apps/web/lib/calls/metered.ts
+/d/zeal/apps/web/lib/db/indexeddb.ts	
+374	/d/zeal/apps/web/lib/db/indexeddb.ts
+/d/zeal/apps/web/lib/emails/adapter.ts	
+504	/d/zeal/apps/web/lib/emails/adapter.ts
+/d/zeal/apps/web/lib/emails/index.ts	
+1015	/d/zeal/apps/web/lib/emails/index.ts
+/d/zeal/apps/web/lib/emails/resend.ts	
+1735	/d/zeal/apps/web/lib/emails/resend.ts
+/d/zeal/apps/web/lib/emails/templates.ts	
+4259	/d/zeal/apps/web/lib/emails/templates.ts
+/d/zeal/apps/web/lib/env.ts	
+495	/d/zeal/apps/web/lib/env.ts
+/d/zeal/apps/web/lib/errors.ts	
+5388	/d/zeal/apps/web/lib/errors.ts
+/d/zeal/apps/web/lib/livekit/room.ts	
+1264	/d/zeal/apps/web/lib/livekit/room.ts
+/d/zeal/apps/web/lib/logger/api-wrapper.ts	
+1541	/d/zeal/apps/web/lib/logger/api-wrapper.ts
+/d/zeal/apps/web/lib/logger/client.ts	
+5318	/d/zeal/apps/web/lib/logger/client.ts
+/d/zeal/apps/web/lib/logger/index.ts	
+8715	/d/zeal/apps/web/lib/logger/index.ts
+/d/zeal/apps/web/lib/logger/server.ts	
+4420	/d/zeal/apps/web/lib/logger/server.ts
+/d/zeal/apps/web/lib/monitoring/config.ts	
+622	/d/zeal/apps/web/lib/monitoring/config.ts
+/d/zeal/apps/web/lib/monitoring/logger.ts	
+457	/d/zeal/apps/web/lib/monitoring/logger.ts
+/d/zeal/apps/web/lib/notifications/service.ts	
+5112	/d/zeal/apps/web/lib/notifications/service.ts
+/d/zeal/apps/web/lib/payments/adapter.ts	
+613	/d/zeal/apps/web/lib/payments/adapter.ts
+/d/zeal/apps/web/lib/payments/index.ts	
+686	/d/zeal/apps/web/lib/payments/index.ts
+/d/zeal/apps/web/lib/payments/razorpay-client.ts	
+2306	/d/zeal/apps/web/lib/payments/razorpay-client.ts
+/d/zeal/apps/web/lib/payments/razorpay.ts	
+1910	/d/zeal/apps/web/lib/payments/razorpay.ts
+/d/zeal/apps/web/lib/query/client.ts	
+233	/d/zeal/apps/web/lib/query/client.ts
+/d/zeal/apps/web/lib/query/provider.tsx	
+302	/d/zeal/apps/web/lib/query/provider.tsx
+/d/zeal/apps/web/lib/realtime/adapter.ts	
+493	/d/zeal/apps/web/lib/realtime/adapter.ts
+/d/zeal/apps/web/lib/realtime/client.ts	
+360	/d/zeal/apps/web/lib/realtime/client.ts
+/d/zeal/apps/web/lib/realtime/index.ts	
+1293	/d/zeal/apps/web/lib/realtime/index.ts
+/d/zeal/apps/web/lib/realtime/server.ts	
+1180	/d/zeal/apps/web/lib/realtime/server.ts
+/d/zeal/apps/web/lib/realtime/supabase-realtime.ts	
+3802	/d/zeal/apps/web/lib/realtime/supabase-realtime.ts
+/d/zeal/apps/web/lib/scheduling/index.ts	
+117	/d/zeal/apps/web/lib/scheduling/index.ts
+/d/zeal/apps/web/lib/scheduling/internal.ts	
+3613	/d/zeal/apps/web/lib/scheduling/internal.ts
+/d/zeal/apps/web/lib/scheduling/types.ts	
+669	/d/zeal/apps/web/lib/scheduling/types.ts
+/d/zeal/apps/web/lib/security.ts	
+3224	/d/zeal/apps/web/lib/security.ts
+/d/zeal/apps/web/lib/services/index.ts	
+73	/d/zeal/apps/web/lib/services/index.ts
+/d/zeal/apps/web/lib/services/registry.ts	
+12682	/d/zeal/apps/web/lib/services/registry.ts
+/d/zeal/apps/web/lib/services/slug.ts	
+3365	/d/zeal/apps/web/lib/services/slug.ts
+/d/zeal/apps/web/lib/socket/client.ts	
+1580	/d/zeal/apps/web/lib/socket/client.ts
+/d/zeal/apps/web/lib/socket/server.ts	
+282	/d/zeal/apps/web/lib/socket/server.ts
+/d/zeal/apps/web/lib/storage/adapter.ts	
+516	/d/zeal/apps/web/lib/storage/adapter.ts
+/d/zeal/apps/web/lib/storage/index.ts	
+1225	/d/zeal/apps/web/lib/storage/index.ts
+/d/zeal/apps/web/lib/storage/r2.ts	
+5079	/d/zeal/apps/web/lib/storage/r2.ts
+/d/zeal/apps/web/lib/store/appStore.ts	
+5923	/d/zeal/apps/web/lib/store/appStore.ts
+/d/zeal/apps/web/lib/supabase/admin.ts	
+1256	/d/zeal/apps/web/lib/supabase/admin.ts
+/d/zeal/apps/web/lib/supabase/client.ts	
+1900	/d/zeal/apps/web/lib/supabase/client.ts
+/d/zeal/apps/web/lib/supabase/server.ts	
+1143	/d/zeal/apps/web/lib/supabase/server.ts
+/d/zeal/apps/web/lib/utils.ts	
+169	/d/zeal/apps/web/lib/utils.ts
+/d/zeal/apps/web/lib/validation.ts	
+1946	/d/zeal/apps/web/lib/validation.ts
+/d/zeal/apps/web/lib/wallet/instamojo.ts	
+3567	/d/zeal/apps/web/lib/wallet/instamojo.ts
+/d/zeal/apps/web/lib/wallet/ledger.ts	
+5396	/d/zeal/apps/web/lib/wallet/ledger.ts
+/d/zeal/apps/web/lib/wallet/razorpay.ts	
+730	/d/zeal/apps/web/lib/wallet/razorpay.ts
+/d/zeal/apps/web/lib/websocket/client.ts	
+2247	/d/zeal/apps/web/lib/websocket/client.ts
+/d/zeal/apps/web/lib/websocket-client.ts	
+2243	/d/zeal/apps/web/lib/websocket-client.ts
+/d/zeal/apps/web/lib/white-label/theme.ts	
+1260	/d/zeal/apps/web/lib/white-label/theme.ts
+/d/zeal/apps/web/next-env.d.ts	
+247	/d/zeal/apps/web/next-env.d.ts
+/d/zeal/apps/web/next.config.js	
+643	/d/zeal/apps/web/next.config.js
+/d/zeal/apps/web/package.json	
+2753	/d/zeal/apps/web/package.json
+/d/zeal/apps/web/postcss.config.js	
+69	/d/zeal/apps/web/postcss.config.js
+/d/zeal/apps/web/public/robots.txt	
+104	/d/zeal/apps/web/public/robots.txt
+/d/zeal/apps/web/public/sitemap.xml	
+571	/d/zeal/apps/web/public/sitemap.xml
+/d/zeal/apps/web/tailwind.config.js	
+1844	/d/zeal/apps/web/tailwind.config.js
+/d/zeal/apps/web/tsconfig.json	
+490	/d/zeal/apps/web/tsconfig.json
+/d/zeal/apps/web/types/easy-call-engine.d.ts	
+455	/d/zeal/apps/web/types/easy-call-engine.d.ts
+/d/zeal/DEPLOYMENT_CHECKLIST.md	
+1146	/d/zeal/DEPLOYMENT_CHECKLIST.md
+/d/zeal/docker/admin/Dockerfile	
+559	/d/zeal/docker/admin/Dockerfile
+/d/zeal/docker/api/Dockerfile	
+469	/d/zeal/docker/api/Dockerfile
+/d/zeal/docker/web/Dockerfile	
+674	/d/zeal/docker/web/Dockerfile
+/d/zeal/docker-compose.yml	
+1429	/d/zeal/docker-compose.yml
+/d/zeal/docs/api.md	
+1707	/d/zeal/docs/api.md
+/d/zeal/docs/deployment.md	
+922	/d/zeal/docs/deployment.md
+/d/zeal/docs/SUPABASE_REALTIME_SETUP.md	
+1389	/d/zeal/docs/SUPABASE_REALTIME_SETUP.md
+/d/zeal/package-lock.json	
+431869	/d/zeal/package-lock.json
+/d/zeal/package.json	
+3002	/d/zeal/package.json
+/d/zeal/packages/database/package.json	
+710	/d/zeal/packages/database/package.json
+/d/zeal/packages/database/prisma/migrations/20260807121155_init/migration.sql	
+8977	/d/zeal/packages/database/prisma/migrations/20260807121155_init/migration.sql
+/d/zeal/packages/database/prisma/migrations/migration_lock.toml	
+128	/d/zeal/packages/database/prisma/migrations/migration_lock.toml
+/d/zeal/packages/database/prisma/schema.prisma	
+9296	/d/zeal/packages/database/prisma/schema.prisma
+/d/zeal/packages/database/prisma/seed/ai-consultants.ts	
+4434	/d/zeal/packages/database/prisma/seed/ai-consultants.ts
+/d/zeal/packages/database/prisma/seed/consultants.ts	
+17081	/d/zeal/packages/database/prisma/seed/consultants.ts
+/d/zeal/packages/database/prisma/seed/index.ts	
+368	/d/zeal/packages/database/prisma/seed/index.ts
+/d/zeal/packages/database/prisma/seed/users.ts	
+488	/d/zeal/packages/database/prisma/seed/users.ts
+/d/zeal/packages/database/prisma/seed.ts	
+382	/d/zeal/packages/database/prisma/seed.ts
+/d/zeal/packages/database/prisma.config.js	
+254	/d/zeal/packages/database/prisma.config.js
+/d/zeal/packages/database/prisma.config.ts	
+317	/d/zeal/packages/database/prisma.config.ts
+/d/zeal/packages/database/src/index.ts	
+2295	/d/zeal/packages/database/src/index.ts
+/d/zeal/packages/database/tsconfig.json	
+85	/d/zeal/packages/database/tsconfig.json
+/d/zeal/packages/shared/config/env.ts	
+1320	/d/zeal/packages/shared/config/env.ts
+/d/zeal/packages/shared/lib/calls/billing.ts	
+1163	/d/zeal/packages/shared/lib/calls/billing.ts
+/d/zeal/packages/shared/lib/constants.ts	
+538	/d/zeal/packages/shared/lib/constants.ts
+/d/zeal/packages/shared/lib/errors.ts	
+1167	/d/zeal/packages/shared/lib/errors.ts
+/d/zeal/packages/shared/lib/ledger.ts	
+1460	/d/zeal/packages/shared/lib/ledger.ts
+/d/zeal/packages/shared/lib/livekit/room.ts	
+805	/d/zeal/packages/shared/lib/livekit/room.ts
+/d/zeal/packages/shared/lib/livekit.ts	
+516	/d/zeal/packages/shared/lib/livekit.ts
+/d/zeal/packages/shared/lib/notifications/service.ts	
+1459	/d/zeal/packages/shared/lib/notifications/service.ts
+/d/zeal/packages/shared/lib/notifications.ts	
+985	/d/zeal/packages/shared/lib/notifications.ts
+/d/zeal/packages/shared/lib/razorpay.ts	
+595	/d/zeal/packages/shared/lib/razorpay.ts
+/d/zeal/packages/shared/lib/wallet/ledger.ts	
+2123	/d/zeal/packages/shared/lib/wallet/ledger.ts
+/d/zeal/packages/shared/lib/wallet/razorpay.ts	
+676	/d/zeal/packages/shared/lib/wallet/razorpay.ts
+/d/zeal/packages/shared/types/enums.ts	
+1053	/d/zeal/packages/shared/types/enums.ts
+/d/zeal/packages/shared/types/index.ts	
+78	/d/zeal/packages/shared/types/index.ts
+/d/zeal/packages/shared/types/models.ts	
+2045	/d/zeal/packages/shared/types/models.ts
+/d/zeal/packages/shared/types/schemas.ts	
+2548	/d/zeal/packages/shared/types/schemas.ts
+/d/zeal/packages/types/package.json	
+353	/d/zeal/packages/types/package.json
+/d/zeal/packages/types/src/enums.ts	
+881	/d/zeal/packages/types/src/enums.ts
+/d/zeal/packages/types/src/index.ts	
+121	/d/zeal/packages/types/src/index.ts
+/d/zeal/packages/types/src/models.ts	
+1875	/d/zeal/packages/types/src/models.ts
+/d/zeal/packages/types/src/schemas.ts	
+612	/d/zeal/packages/types/src/schemas.ts
+/d/zeal/packages/types/src/server/index.ts	
+415	/d/zeal/packages/types/src/server/index.ts
+/d/zeal/packages/types/tsconfig.json	
+85	/d/zeal/packages/types/tsconfig.json
+/d/zeal/packages/ui/package.json	
+521	/d/zeal/packages/ui/package.json
+/d/zeal/packages/ui/src/Avatar.tsx	
+1375	/d/zeal/packages/ui/src/Avatar.tsx
+/d/zeal/packages/ui/src/Badge.tsx	
+1295	/d/zeal/packages/ui/src/Badge.tsx
+/d/zeal/packages/ui/src/Button.tsx	
+2714	/d/zeal/packages/ui/src/Button.tsx
+/d/zeal/packages/ui/src/Card.tsx	
+1266	/d/zeal/packages/ui/src/Card.tsx
+/d/zeal/packages/ui/src/index.ts	
+421	/d/zeal/packages/ui/src/index.ts
+/d/zeal/packages/ui/src/Input.tsx	
+1143	/d/zeal/packages/ui/src/Input.tsx
+/d/zeal/packages/ui/src/Skeleton.tsx	
+264	/d/zeal/packages/ui/src/Skeleton.tsx
+/d/zeal/packages/ui/src/Tabs.tsx	
+1895	/d/zeal/packages/ui/src/Tabs.tsx
+/d/zeal/packages/ui/src/utils.ts	
+166	/d/zeal/packages/ui/src/utils.ts
+/d/zeal/packages/ui/tsconfig.json	
+136	/d/zeal/packages/ui/tsconfig.json
+/d/zeal/packages/utils/package.json	
+215	/d/zeal/packages/utils/package.json
+/d/zeal/packages/utils/src/currency.ts	
+93	/d/zeal/packages/utils/src/currency.ts
+/d/zeal/packages/utils/src/date.ts	
+594	/d/zeal/packages/utils/src/date.ts
+/d/zeal/packages/utils/src/format.ts	
+213	/d/zeal/packages/utils/src/format.ts
+/d/zeal/packages/utils/src/index.ts	
+78	/d/zeal/packages/utils/src/index.ts
+/d/zeal/packages/utils/tsconfig.json	
+85	/d/zeal/packages/utils/tsconfig.json
+/d/zeal/prisma.config.ts	
+340	/d/zeal/prisma.config.ts
+/d/zeal/raw-schema.sql	
+11636	/d/zeal/raw-schema.sql
+/d/zeal/README.md	
+4879	/d/zeal/README.md
+/d/zeal/scripts/alerting.sh	
+1413	/d/zeal/scripts/alerting.sh
+/d/zeal/scripts/audit.sh	
+635	/d/zeal/scripts/audit.sh
+/d/zeal/scripts/deploy-production.sh	
+901	/d/zeal/scripts/deploy-production.sh
+/d/zeal/scripts/deploy.sh	
+594	/d/zeal/scripts/deploy.sh
+/d/zeal/scripts/health-check.sh	
+831	/d/zeal/scripts/health-check.sh
+/d/zeal/scripts/optimize-images.sh	
+683	/d/zeal/scripts/optimize-images.sh
+/d/zeal/scripts/production-check.sh	
+1334	/d/zeal/scripts/production-check.sh
+/d/zeal/scripts/rollback.sh	
+513	/d/zeal/scripts/rollback.sh
+/d/zeal/scripts/validate-env.js	
+390	/d/zeal/scripts/validate-env.js
+/d/zeal/setup.sh	
+15303	/d/zeal/setup.sh
+/d/zeal/supabase/create-admin.sql	
+2857	/d/zeal/supabase/create-admin.sql
+/d/zeal/supabase/debug-logging.sql	
+4641	/d/zeal/supabase/debug-logging.sql
+/d/zeal/supabase/diagnose.sql	
+2070	/d/zeal/supabase/diagnose.sql
+/d/zeal/supabase/enable-ai-realtime.sql	
+1396	/d/zeal/supabase/enable-ai-realtime.sql
+/d/zeal/supabase/fix-ai-consultants-rls.sql	
+5844	/d/zeal/supabase/fix-ai-consultants-rls.sql
+/d/zeal/supabase/seed-consultants.sql	
+10026	/d/zeal/supabase/seed-consultants.sql
+/d/zeal/supabase-schema-idempotent.sql	
+13104	/d/zeal/supabase-schema-idempotent.sql
+/d/zeal/supabase-schema.sql	
+11636	/d/zeal/supabase-schema.sql
+/d/zeal/tooling/typescript/tsconfig.base.json	
+507	/d/zeal/tooling/typescript/tsconfig.base.json
+/d/zeal/vercel.json	
+82	/d/zeal/vercel.json

@@ -30,24 +30,24 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const service = getService(category, serviceSlug);
   if (!service) notFound();
 
-  let consultants: Awaited<ReturnType<typeof fetchConsultants>> = [];
-
+  // ─── Fetch human consultants ──────────────────────────────────────────
+  let humanConsultants: Awaited<ReturnType<typeof fetchHumanConsultants>> = [];
   try {
-    consultants = await fetchConsultants(service);
+    humanConsultants = await fetchHumanConsultants(service);
   } catch (err) {
-    console.error("[ServicePage] Failed to fetch consultants:", err);
-    // Fall through with empty array – page still renders with empty state
+    console.error("[ServicePage] Human consultants failed:", err);
   }
 
-  // Collect languages for filter bar
-  const languageSet = new Set<string>();
-  for (const c of consultants) {
-    for (const lang of c.languages || []) languageSet.add(lang);
+  // ─── Fetch AI consultants ─────────────────────────────────────────────
+  let aiConsultants: Awaited<ReturnType<typeof fetchAiConsultants>> = [];
+  try {
+    aiConsultants = await fetchAiConsultants(service);
+  } catch (err) {
+    console.error("[ServicePage] AI consultants failed:", err);
   }
-  const languages = Array.from(languageSet).sort();
 
-  // Map to ConsultantProfile shape
-  const profiles: ConsultantProfile[] = consultants.map((c) => ({
+  // ─── Merge into a single list, humans first, then AI ──────────────────
+  const humanProfiles: ConsultantProfile[] = humanConsultants.map((c) => ({
     id: c.id,
     userId: c.userId,
     name: c.user.name || c.user.username,
@@ -65,21 +65,56 @@ export default async function ServicePage({ params }: ServicePageProps) {
     languages: c.languages || [],
     specialties: c.specialties || [],
     faith: c.faith as never,
+    isAI: false,
   }));
+
+  const aiProfiles: ConsultantProfile[] = aiConsultants.map((c) => ({
+    id: c.id,
+    userId: `ai-${c.id}`,
+    name: c.name,
+    username: c.username,
+    bio: c.bio || "",
+    avatar: c.avatar || "",
+    category: c.category as never,
+    isVerified: true,
+    isOnline: true,
+    perMinuteRate: c.perMinuteRate,
+    experience: c.experience || 100,
+    rating: c.rating,
+    totalConsultations: c.totalConsultations,
+    sparks: c.sparks || 0,
+    languages: c.languages || [],
+    specialties: c.specialties || [],
+    faith: "HINDU" as never,
+    isAI: true,
+    isPaid: c.isPaid,
+  }));
+
+  // Combine: humans first (sorted by rating), then AI
+  const allProfiles = [...humanProfiles, ...aiProfiles];
+
+  // Collect languages for filter bar
+  const languageSet = new Set<string>();
+  for (const c of allProfiles) {
+    for (const lang of c.languages || []) languageSet.add(lang);
+  }
+  const languages = Array.from(languageSet).sort();
 
   return (
     <ServicePageClient
       service={service}
-      consultants={profiles}
+      consultants={allProfiles}
       languages={languages}
+      humanCount={humanProfiles.length}
+      aiCount={aiProfiles.length}
     />
   );
 }
 
-async function fetchConsultants(service: ReturnType<typeof getService>) {
+// ─── Human consultants ─────────────────────────────────────────────────
+async function fetchHumanConsultants(service: ReturnType<typeof getService>) {
   if (!service) return [];
 
-  // Try exact specialties match first
   const exactMatches = await prisma.consultant.findMany({
     where: {
       category: service.category as never,
@@ -88,9 +123,7 @@ async function fetchConsultants(service: ReturnType<typeof getService>) {
       specialties: { hasSome: service.specialties },
     },
     include: {
-      user: {
-        select: { id: true, name: true, username: true, avatar: true },
-      },
+      user: { select: { id: true, name: true, username: true, avatar: true } },
     },
     orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
     take: 60,
@@ -98,21 +131,40 @@ async function fetchConsultants(service: ReturnType<typeof getService>) {
 
   if (exactMatches.length > 0) return exactMatches;
 
-  // Fallback: any consultant in the same category
-  const categoryMatches = await prisma.consultant.findMany({
+  return prisma.consultant.findMany({
     where: {
       category: service.category as never,
       isActive: true,
       status: "VERIFIED",
     },
     include: {
-      user: {
-        select: { id: true, name: true, username: true, avatar: true },
-      },
+      user: { select: { id: true, name: true, username: true, avatar: true } },
     },
     orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
     take: 60,
   });
+}
 
-  return categoryMatches;
+// ─── AI consultants ────────────────────────────────────────────────────
+async function fetchAiConsultants(service: ReturnType<typeof getService>) {
+  if (!service) return [];
+
+  // Try exact category match first
+  const matches = await prisma.aIConsultant.findMany({
+    where: {
+      isActive: true,
+      category: service.category,
+    },
+    orderBy: [{ isFeatured: "desc" }, { rating: "desc" }],
+    take: 20,
+  });
+
+  if (matches.length > 0) return matches;
+
+  // Fallback: featured AI consultants from any category
+  return prisma.aIConsultant.findMany({
+    where: { isActive: true, isFeatured: true },
+    orderBy: { rating: "desc" },
+    take: 5,
+  });
 }

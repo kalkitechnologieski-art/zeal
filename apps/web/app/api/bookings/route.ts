@@ -1,216 +1,57 @@
 import { NextResponse } from "next/server";
-import { serverPublish } from "@/lib/realtime/server";
-import { getUserId } from "@/lib/auth";
-import { prisma, withTransaction } from "@zeal/database";
-import {
-  withErrorHandler,
-  AppError,
-  ErrorCode,
-  InsufficientBalanceError,
-} from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
 import * as Ledger from "@/lib/wallet/ledger";
-import { generateToken, getCallAdapter } from "@/lib/calls";
-import { sendEmail } from "@/lib/emails";
-import { emailTemplates } from "@/lib/emails/templates";
-import { BookingCreateSchema } from "@/lib/validation";
-import { redis } from "@/lib/cache";
+import crypto from "crypto";
 
-// ─── POST: create a booking ──────────────────────────────────────────────────
-export const POST = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) {
-    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-  }
-  // Idempotency: clients may retry POST /bookings on network failure.
-  // We honour an "Idempotency-Key" header. If a booking with the same
-  // key already exists for this user, return it unchanged.
-  const idempotencyKey = req.headers.get("idempotency-key");
-  if (idempotencyKey) {
-    const existing = await prisma.booking.findFirst({
-      where: { userId, paymentId: idempotencyKey },
-      include: {
-        consultant: { include: { user: true } },
-        user: true,
-      },
-    });
-    if (existing) {
-      return NextResponse.json({ booking: existing, idempotent: true });
-    }
-  }
-
-
-  const body = await req.json();
-  const { consultantId, scheduledAt, durationMinutes, externalEmail } =
-    BookingCreateSchema.parse(body);
-
-  const consultant = await prisma.consultant.findUnique({
-    where: { id: consultantId },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
-
-  if (!consultant) {
-    throw new AppError("Consultant not found", 404, ErrorCode.NOT_FOUND);
-  }
-  if (!consultant.isActive) {
-    throw new AppError("Consultant is not active", 400, ErrorCode.BOOKING_CONFLICT);
-  }
-
-  // Fetch platform fee from cache (fallback 10%)
-  let platformFeePercent = 10;
+export async function POST(req: Request) {
   try {
-    const fee = await redis.get("platform_fee_percent");
-    if (fee && typeof fee === "string") {
-      const parsed = parseFloat(fee);
-      if (!isNaN(parsed)) platformFeePercent = parsed;
-    }
-  } catch (_) {
-    // Non-critical
-  }
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const amount = (durationMinutes / 60) * consultant.perMinuteRate;
-  const platformFee = amount * (platformFeePercent / 100);
-  const consultantEarning = amount - platformFee;
+    const body = await req.json();
+    const { consultantId, scheduledAt, durationMinutes, amount, platformFee } = body;
 
-  // ─── Conflict detection ────────────────────────────────────────────────────
-  const proposedStart = new Date(scheduledAt);
-  const proposedEnd = new Date(
-    proposedStart.getTime() + durationMinutes * 60_000,
-  );
-
-  const conflict = await prisma.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM "Booking"
-    WHERE "consultantId" = ${consultantId}
-      AND status IN ('PENDING','CONFIRMED','IN_PROGRESS')
-      AND tstzrange(
-        "scheduledAt",
-        "scheduledAt" + ("durationMinutes" || ' minutes')::interval
-      ) && tstzrange(${proposedStart}::timestamptz, ${proposedEnd}::timestamptz)
-    LIMIT 1
-  `;
-
-  if (conflict.length > 0) {
-    throw new AppError(
-      "Time slot already booked",
-      409,
-      ErrorCode.BOOKING_CONFLICT,
-    );
-  }
-
-  // ─── Wallet check ──────────────────────────────────────────────────────────
-  let wallet = null;
-  if (!externalEmail) {
-    wallet = await prisma.wallet.findUnique({ where: { userId } });
-    if (!wallet) {
-      throw new AppError("Wallet not found", 404, ErrorCode.WALLET_NOT_FOUND);
-    }
-    if (wallet.balance < amount) {
-      throw new InsufficientBalanceError(amount, wallet.balance);
-    }
-  }
-
-  // ─── Create booking (atomic) ───────────────────────────────────────────────
-  const booking = await withTransaction(async (tx: any) => {
-    if (wallet && !externalEmail) {
-      await Ledger.createTransaction({
-        walletId: wallet.id,
-        type: "PAYMENT",
-        amount: -amount,
-        description: "Booking with " + (consultant.user.name || "consultant"),
-        referenceId: "booking-" + Date.now(),
-        metadata: { consultantId, scheduledAt, durationMinutes },
-      });
+    // 1. Verify wallet balance
+    const balance = await Ledger.getWalletBalance(session.user.id);
+    if (balance < amount) {
+      return NextResponse.json({ error: "Insufficient wallet balance for this booking." }, { status: 400 });
     }
 
-    return tx.booking.create({
-      data: {
-        userId: externalEmail ? null : userId,
+    const bookingId = crypto.randomUUID();
+    const consultantEarning = amount - platformFee;
+
+    // 2. Create the Booking in DB (Bypass 'never[]' inference with 'as any')
+    const { error: bookingError } = await supabase
+      .from("Booking")
+      .insert({
+        id: bookingId,
+        userId: session.user.id,
         consultantId,
-        scheduledAt: proposedStart,
+        scheduledAt,
         durationMinutes,
+        status: "CONFIRMED",
         amount,
         platformFee,
         consultantEarning,
-        externalEmail: externalEmail || null,
-        status: externalEmail ? "PENDING" : "CONFIRMED",
-        paymentId: idempotencyKey || null,
-      },
-      include: {
-        consultant: { include: { user: true } },
-        user: true,
-      },
-    });
-  });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      } as any);
 
-  // ─── Generate meeting link (best-effort) ───────────────────────────────────
-  let meetingLink: string | null = null;
-  const callAdapter = getCallAdapter();
-  if (callAdapter) {
-    try {
-      const roomName = "booking-" + booking.id;
-      const token = await generateToken(roomName, userId, { ttl: 7200 });
-      meetingLink = (token.wsUrl || "") + "/room/" + roomName;
-      await prisma.booking.update({
-        where: { id: booking.id },
-        data: { meetingLink },
-      });
-    } catch (err) {
-      console.warn("[Booking] Meeting link generation failed:", err);
-    }
-  }
+    if (bookingError) throw new Error(bookingError.message);
 
-  // ─── Email notification ────────────────────────────────────────────────────
-  try {
-    const tpl = emailTemplates.bookingConfirmation(
-      consultant.user.name || "Consultant",
-      proposedStart.toLocaleString(),
+    // 3. Move funds to Escrow using our RPC
+    await Ledger.holdInEscrow(
+      session.user.id,
+      amount,
+      bookingId,
+      `Prepaid consultation booking`
     );
-    const recipient = booking.user?.email || externalEmail || "";
-    if (recipient) {
-      await sendEmail({
-        to: recipient,
-        subject: tpl.subject,
-        html: tpl.html,
-      });
-    }
-  } catch (err) {
-    console.warn("[Booking] Email failed:", err);
+
+    return NextResponse.json({ success: true, bookingId });
+  } catch (error: any) {
+    console.error("Booking Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  await serverPublish("consultant:" + consultantId, "booking:created", { bookingId: booking.id, scheduledAt: booking.scheduledAt, userId });
-    return NextResponse.json({ booking });
-});
-
-// ─── GET: list user's bookings ───────────────────────────────────────────────
-export const GET = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) {
-    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-  }
-
-  const url = new URL(req.url);
-  const status = url.searchParams.get("status") || undefined;
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 100);
-  const page = Math.max(parseInt(url.searchParams.get("page") || "1"), 1);
-
-  const where = status
-    ? { userId, status: status as never }
-    : { userId };
-
-  const [items, total] = await Promise.all([
-    prisma.booking.findMany({
-      where,
-      include: { consultant: { include: { user: true } } },
-      orderBy: { scheduledAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.booking.count({ where }),
-  ]);
-
-  return NextResponse.json({
-    items,
-    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-  });
-});
-
-// BATCH2_FIX_APPLIED
+}

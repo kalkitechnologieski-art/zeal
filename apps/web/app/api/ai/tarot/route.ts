@@ -1,43 +1,18 @@
-import { NextResponse } from "next/server";
-import { withErrorHandler } from "@/lib/errors";
-import { getTarotReading } from "@/lib/ai/ai-chat";
-import { redis } from "@/lib/cache";
+import { generateFaultTolerantStream } from "@/lib/ai/router";
+import { aiRateLimiter } from "@/lib/rate-limit";
 
-export const POST = withErrorHandler(async (req: Request) => {
-  const { question, cards } = await req.json();
+export async function POST(req: Request) {
+  try {
+    const { success } = await aiRateLimiter.limit(req.headers.get("x-forwarded-for") || "127.0.0.1");
+    if (!success) return new Response("Rate limit exceeded.", { status: 429 });
 
-  const cacheKey = `tarot:${question}`;
-  const cached = await redis.get(cacheKey);
-  if (cached && typeof cached === "string") {
-    try {
-      const parsed = JSON.parse(cached);
-      return NextResponse.json({ ...parsed, cached: true });
-    } catch {
-      // invalid cache, ignore
-    }
+    const { cards, spreadType } = await req.json();
+
+    const systemPrompt = `You are an elite, intuitive Tarot reader. Interpret the following drawn cards for a '${spreadType || "3-Card (Past, Present, Future)"}' spread: ${JSON.stringify(cards)}. Maintain a profound, psychologically revealing, and modern tone akin to high-end mystic platforms. Break down the imagery, core meaning, and actionable advice.`;
+    const userPrompt = "Provide my deep tarot reading based on these pulled cards.";
+
+    return await generateFaultTolerantStream(systemPrompt, userPrompt);
+  } catch (error: any) {
+    return new Response(error.message, { status: 500 });
   }
-
-  const reading = await getTarotReading(question);
-
-  const cardMeanings: Record<number, string> = {
-    1: "The Magician – Manifestation, power, skill",
-    2: "The High Priestess – Intuition, mystery, subconscious",
-    3: "The Empress – Abundance, nurturing, creation",
-    4: "The Emperor – Authority, structure, protection",
-    5: "The Hierophant – Tradition, wisdom, guidance",
-    6: "The Lovers – Love, harmony, choices",
-    7: "The Chariot – Victory, willpower, determination",
-    8: "Strength – Courage, patience, inner strength",
-    9: "The Hermit – Wisdom, solitude, introspection",
-    10: "Wheel of Fortune – Destiny, change, opportunity",
-  };
-
-  const cardDetails = (cards || []).map((id: number) => ({
-    id,
-    meaning: cardMeanings[id] || "A meaningful card for your journey.",
-  }));
-
-  const result = { reading, cards: cardDetails, cached: false };
-  await redis.setex(cacheKey, 3600, JSON.stringify(result));
-  return NextResponse.json(result);
-});
+}

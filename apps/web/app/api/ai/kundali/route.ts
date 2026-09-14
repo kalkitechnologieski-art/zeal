@@ -1,42 +1,18 @@
-import { NextResponse } from "next/server";
-import { withErrorHandler } from "@/lib/errors";
-import { getAIResponse } from "@/lib/ai/ai-chat";
-import { redis } from "@/lib/cache";
+import { generateFaultTolerantStream } from "@/lib/ai/router";
+import { aiRateLimiter } from "@/lib/rate-limit";
 
-export const POST = withErrorHandler(async (req: Request) => {
-  const { date, time, place } = await req.json();
+export async function POST(req: Request) {
+  try {
+    const { success } = await aiRateLimiter.limit(req.headers.get("x-forwarded-for") || "127.0.0.1");
+    if (!success) return new Response("Rate limit exceeded.", { status: 429 });
 
-  const cacheKey = `kundali:${date}:${time}:${place}`;
-  const cached = await redis.get(cacheKey);
-  if (cached && typeof cached === "string") {
-    try {
-      const parsed = JSON.parse(cached);
-      return NextResponse.json({ ...parsed, cached: true });
-    } catch {
-      // ignore invalid cache
-    }
+    const { fullName, birthDate, birthTime, location } = await req.json();
+
+    const systemPrompt = `You are a master Vedic Astrologer specializing in Janam Kundali (Birth Charts). Provide deep, structural analysis covering planetary placements (Lagna, Moon sign, Sun sign) and core life paths for ${fullName}, born in ${location} on ${birthDate} at ${birthTime}. Keep formatting ultra-clean.`;
+    const userPrompt = "Analyze my Janam Kundali. Break down my ascendant, core strengths, and upcoming planetary influences.";
+
+    return await generateFaultTolerantStream(systemPrompt, userPrompt);
+  } catch (error: any) {
+    return new Response(error.message, { status: 500 });
   }
-
-  const prompt = `Generate a detailed Vedic birth chart (Kundali) for a person born on ${date} at ${time} in ${place}. Include the ascendant, moon sign, sun sign, and a brief interpretation.`;
-
-  const response = await getAIResponse(
-    prompt,
-    "",
-    "You are a world-class Vedic astrologer with 30+ years of experience. Provide accurate and detailed birth chart readings."
-  );
-
-  const chart = {
-    ascendant: "Taurus",
-    moon: "Cancer",
-    sun: "Leo",
-    houses: Array.from({ length: 12 }, (_, i) => ({
-      house: i + 1,
-      sign: ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"][i],
-      lord: ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"][i],
-    })),
-    interpretation: response.content,
-  };
-
-  await redis.setex(cacheKey, 86400, JSON.stringify(chart));
-  return NextResponse.json({ ...chart, cached: false });
-});
+}

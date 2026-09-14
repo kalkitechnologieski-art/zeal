@@ -1,29 +1,18 @@
-import { NextResponse } from "next/server";
-import { withErrorHandler } from "@/lib/errors";
-import { getAIResponse } from "@/lib/ai/ai-chat";
-import { redis } from "@/lib/cache";
+import { generateFaultTolerantStream } from "@/lib/ai/router";
+import { aiRateLimiter } from "@/lib/rate-limit";
 
-export const POST = withErrorHandler(async (req: Request) => {
-  const formData = await req.formData();
-  const image = formData.get("image");
+export async function POST(req: Request) {
+  try {
+    const { success } = await aiRateLimiter.limit(req.headers.get("x-forwarded-for") || "127.0.0.1");
+    if (!success) return new Response("Rate limit exceeded.", { status: 429 });
 
-  // In the future, we can use a vision model. For now, we use a static prompt.
-  const prompt = `Provide a detailed palmistry reading for a person. Describe the life line, heart line, head line, and fate line. Give a comprehensive interpretation.`;
+    const { handSide, primaryFocus } = await req.json();
 
-  const cacheKey = `palmistry:${Date.now()}`; // No caching for images
-  const response = await getAIResponse(
-    prompt,
-    "",
-    "You are an expert palmist with 25+ years of experience. Provide detailed, insightful palm readings."
-  );
+    const systemPrompt = `You are an expert Palmistry reader combining ancient chiromancy with modern psychological framing. Analyze the user's ${handSide || "Right"} hand palm scan with a focus on '${primaryFocus || "Life and Career"}'. Describe the main lines (Heart line, Head line, Life line, Fate line) with depth, nuance, and inspiring clarity.`;
+    const userPrompt = "Provide my digital palm reading based on my hand analysis.";
 
-  const analysis = {
-    lifeLine: "Strong and clear, indicating vitality.",
-    heartLine: "Long and curved, showing emotional depth.",
-    headLine: "Straight and long, suggesting analytical thinking.",
-    fateLine: "Present, indicating a purposeful life.",
-    interpretation: response.content,
-  };
-
-  return NextResponse.json({ analysis });
-});
+    return await generateFaultTolerantStream(systemPrompt, userPrompt);
+  } catch (error: any) {
+    return new Response(error.message, { status: 500 });
+  }
+}

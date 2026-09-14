@@ -1,48 +1,34 @@
 import { NextResponse } from "next/server";
-import { createServerClientFromCookies } from "@zeal/database";
-import { withErrorHandler } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/server";
 
-export const dynamic = "force-dynamic";
+export async function GET(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get("category");
+    const limit = parseInt(searchParams.get("limit") || "20");
 
-export const GET = withErrorHandler(async (req: Request) => {
-  const supabase = await createServerClientFromCookies();
-  const url = new URL(req.url);
-  const category = url.searchParams.get("category");
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "60"), 200);
+    let query = supabase
+      .from("Consultant")
+      .select(`
+        id, category, specialties, languages, bio, perMinuteRate, rating, totalConsultations,
+        user:User!userId(name, avatar, username)
+      `)
+      .eq("status", "VERIFIED")
+      .eq("isActive", true)
+      .order("rating", { ascending: false })
+      .limit(limit);
 
-  let q = supabase
-    .from("Consultant")
-    .select(`
-      id, userId, category, specialties, languages, bio, perMinuteRate,
-      rating, totalConsultations, isVerified, isActive, faith, subdomain,
-      chatRate, audioRate, videoRate,
-      user:User!Consultant_userId_fkey (id, name, username, avatar)
-    `)
-    .eq("status", "VERIFIED")
-    .eq("isActive", true)
-    .order("rating", { ascending: false })
-    .limit(limit);
+    if (category) {
+      query = query.eq("category", category);
+    }
 
-  if (category) q = q.eq("category", category);
+    const { data: consultants, error } = await query;
 
-  const { data, error } = await q;
-  if (error) return NextResponse.json({ items: [], total: 0 }, { status: 500 });
+    if (error) throw new Error(error.message);
 
-  const items = (data || []).map((c: Record<string, unknown>) => {
-    const user = c.user as Record<string, unknown> || {};
-    return {
-      id: c.id, userId: c.userId,
-      name: user.name || user.username,
-      username: user.username, avatar: user.avatar || "",
-      bio: c.bio || "", category: c.category,
-      isVerified: c.isVerified, isOnline: c.isActive,
-      perMinuteRate: c.perMinuteRate, rating: c.rating,
-      totalConsultations: c.totalConsultations,
-      languages: c.languages || [], specialties: c.specialties || [],
-      faith: c.faith, subdomain: c.subdomain,
-      chatRate: c.chatRate, audioRate: c.audioRate, videoRate: c.videoRate,
-    };
-  });
-
-  return NextResponse.json({ items, total: items.length });
-});
+    return NextResponse.json({ success: true, consultants });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

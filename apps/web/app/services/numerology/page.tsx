@@ -1,71 +1,89 @@
 "use client";
 
 import { useState } from "react";
+import { useCompletion } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { Button, Input } from "@zeal/ui";
-import { ServiceLayout } from "@/components/services/ServiceLayout";
-import { Loader2, Sparkles } from "lucide-react";
+import { Hash, Calendar, User, ArrowRight, Sparkles } from "lucide-react";
 
 export default function NumerologyPage() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setResult(null);
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setResult("✨ Your numerology reading is ready! This feature is coming soon with AI integration.");
-    } catch (error) {
-      setResult("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const { complete, completion, isLoading } = useCompletion({
+    api: "/api/ai/numerology",
+  });
+
+  const handleGenerate = () => {
+    if (!fullName || !birthDate) return;
+    complete("", { body: { fullName, birthDate } });
   };
 
   return (
-    <ServiceLayout 
-      title="Numerology" 
-      icon="🔢" 
-      description="Life path analysis"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-        <div>
-          <label className="block text-sm font-medium text-[#5E4B8B] dark:text-white mb-1">
-            Your Name
-          </label>
-          <Input 
-            type="text" 
-            placeholder="Enter your name" 
-            className="glass border-[#E1C5E7]/30 dark:border-gray-700/30"
-            required
-          />
-        </div>
+    <div className="min-h-screen bg-white selection:bg-amber-100">
+      <div className="max-w-2xl mx-auto px-6 py-24">
         
-        <Button 
-          type="submit" 
-          variant="primary" 
-          className="w-full btn-luxury" 
-          disabled={loading}
-        >
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading...</> : 'Get Numerology'}
-        </Button>
-      </form>
-      
-      {result && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-6 p-6 rounded-xl glass border border-[#E1C5E7]/30 dark:border-gray-700/30"
-        >
-          <h3 className="font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#FFD700]" /> Your Numerology
-          </h3>
-          <p className="text-[#5E4B8B] dark:text-white mt-2 leading-relaxed">{result}</p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
+          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-4">Sacred Numerology.</h1>
+          <p className="text-lg text-gray-500 font-medium">Decode the hidden numbers ruling your destiny and core vibrations.</p>
         </motion.div>
-      )}
-    </ServiceLayout>
+
+        {!completion && !isLoading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+            <div className="relative flex items-center">
+              <User className="absolute left-4 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Full Legal Name"
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-900"
+              />
+            </div>
+
+            <div className="relative flex items-center">
+              <Calendar className="absolute left-4 w-5 h-5 text-gray-400" />
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-900"
+              />
+            </div>
+
+            <button
+              onClick={handleGenerate}
+              disabled={!fullName || !birthDate}
+              className="w-full py-4 mt-8 bg-amber-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-amber-700 disabled:opacity-50 transition-all cursor-pointer shadow-lg shadow-amber-100"
+            >
+              <Hash className="w-5 h-5" /> Calculate Numbers
+            </button>
+          </motion.div>
+        )}
+
+        {(isLoading || completion) && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-lg prose-amber mx-auto">
+            {isLoading && !completion && (
+              <div className="flex items-center gap-3 text-amber-600 font-medium animate-pulse mb-6">
+                <Sparkles className="w-5 h-5" /> Reducing digits and evaluating matrix vibrations...
+              </div>
+            )}
+            
+            <div className="text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
+              {completion}
+            </div>
+
+            {!isLoading && completion && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-12 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border border-amber-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Consult a Numerologist</h3>
+                <p className="text-gray-600 mb-6">Discover name-correction spelling adjustments for peak success.</p>
+                <button className="w-full py-3 bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-amber-700 transition-all cursor-pointer">
+                  Speak with Expert <ArrowRight className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </div>
   );
 }

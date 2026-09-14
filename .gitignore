@@ -64,3 +64,6 @@ NUL
 # ═══════════════════════════════════════════════════════════════════════════
 packages/database/prisma/*.db
 packages/database/prisma/*.db-journal
+
+# Prisma 7 generated client (rebuilt on install)
+packages/database/generated/

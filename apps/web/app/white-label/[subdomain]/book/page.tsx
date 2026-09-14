@@ -2,21 +2,21 @@ import { notFound } from "next/navigation";
 import { prisma } from "@zeal/database";
 import Link from "next/link";
 
-interface PageProps {
-  params: Promise<{ subdomain: string }>;
-}
+interface Props { params: Promise<{ subdomain: string }>; }
 
-export default async function WhiteLabelBookPage({ params }: PageProps) {
+export default async function WhiteLabelBookPage({ params }: Props) {
   const { subdomain } = await params;
 
   const consultant = await prisma.consultant.findUnique({
     where: { subdomain },
     include: { user: { select: { name: true } } },
   });
-
   if (!consultant || !consultant.subdomainActive) notFound();
 
   const name = consultant.user.name || "the consultant";
+  const loginHref =
+    "/auth/login?redirect=" +
+    encodeURIComponent("/white-label/" + subdomain + "/book");
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
@@ -32,8 +32,12 @@ export default async function WhiteLabelBookPage({ params }: PageProps) {
           Booking is available when signed in. Please log in to continue.
         </p>
         <Link
-          href="/auth/login"
-          className="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium"
+          href={loginHref}
+          className="inline-block px-6 py-3 rounded-xl text-white font-medium"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--wl-primary), var(--wl-accent))",
+          }}
         >
           Sign in to Book
         </Link>
@@ -42,4 +46,5 @@ export default async function WhiteLabelBookPage({ params }: PageProps) {
   );
 }
 
-// BATCH3_APPLIED
+export const dynamic = "force-dynamic";
+

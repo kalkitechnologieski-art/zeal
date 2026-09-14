@@ -51,7 +51,7 @@ function RecordingsContent() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {recordings.map((r: any) => (
+      {recordings.map((r: { id: string; recordingUrl?: string | null; recordingReady?: boolean; durationSeconds?: number; createdAt: string; consultant?: { user?: { name?: string | null } | null } | null }) => (
         <motion.div key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-card-3d hover:shadow-xl transition-all">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
@@ -68,7 +68,7 @@ function RecordingsContent() {
           </div>
           <div className="mt-3 flex gap-2">
             {r.recordingReady && r.recordingUrl && (
-              <Button variant="primary" size="sm" className="flex-1 text-xs py-1 btn-luxury" onClick={() => window.open(r.recordingUrl, '_blank')}>
+              <Button variant="primary" size="sm" className="flex-1 text-xs py-1 btn-luxury" onClick={() => r.recordingUrl && window.open(r.recordingUrl, "_blank")}>
                 <Video className="w-3 h-3 mr-1" /> Play
               </Button>
             )}

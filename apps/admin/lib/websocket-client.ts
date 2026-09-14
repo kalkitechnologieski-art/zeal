@@ -3,7 +3,7 @@ import { io, Socket } from "socket.io-client";
 export class WebSocketClient {
   private static instance: WebSocketClient;
   private socket: Socket | null = null;
-  private listeners: Map<string, ((data: any) => void)[]> = new Map();
+  private listeners: Map<string, ((data: unknown) => void)[]> = new Map();
 
   private constructor() {}
 
@@ -26,10 +26,10 @@ export class WebSocketClient {
       reconnectionDelay: 1000,
     });
     this.socket.on("connect", () => {
-      console.log("[WebSocket] Connected");
+      console.debug("[WebSocket] Connected");
       this.emit("join", { userId });
     });
-    this.socket.on("disconnect", () => console.log("[WebSocket] Disconnected"));
+    this.socket.on("disconnect", () => console.debug("[WebSocket] Disconnected"));
     this.socket.on("error", (err) => console.error("[WebSocket] Error:", err));
     this.socket.onAny((event, ...args) => {
       const data = args[0];
@@ -38,12 +38,12 @@ export class WebSocketClient {
     });
   }
 
-  public on(event: string, callback: (data: any) => void): void {
+  public on(event: string, callback: (data: unknown) => void): void {
     if (!this.listeners.has(event)) this.listeners.set(event, []);
     this.listeners.get(event)!.push(callback);
   }
 
-  public off(event: string, callback: (data: any) => void): void {
+  public off(event: string, callback: (data: unknown) => void): void {
     const handlers = this.listeners.get(event);
     if (handlers) {
       const idx = handlers.indexOf(callback);
@@ -51,7 +51,7 @@ export class WebSocketClient {
     }
   }
 
-  public emit(event: string, data: any): void {
+  public emit(event: string, data: unknown): void {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else {

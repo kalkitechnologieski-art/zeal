@@ -5,7 +5,7 @@ export class AppError extends Error {
     public override message: string,
     public statusCode: number = 500,
     public code?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = "AppError";
@@ -55,9 +55,9 @@ export function handleApiError(error: unknown): NextResponse {
 }
 
 export function withErrorHandler(
-  handler: (req: Request, ...args: any[]) => Promise<Response>
+  handler: (req: Request, ...args: unknown[]) => Promise<Response>
 ) {
-  return async (req: Request, ...args: any[]) => {
+  return async (req: Request, ...args: unknown[]) => {
     try {
       return await handler(req, ...args);
     } catch (error) {

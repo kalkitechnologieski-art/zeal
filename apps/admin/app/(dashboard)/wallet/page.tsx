@@ -98,7 +98,7 @@ function WalletContent() {
             ) : txItems.length === 0 ? (
               <EmptyState icon={WalletIcon} title="No Transactions" description="Your transactions will appear here." />
             ) : (
-              txItems.slice(0, 10).map((tx: any) => (
+              txItems.slice(0, 10).map((tx: { id: string; type: string; amount: number; description: string; createdAt: string }) => (
                 <div key={tx.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F4E8F7] dark:hover:bg-gray-800 transition-colors">
                   <div className="flex items-center gap-2">
                     {tx.type === 'TOPUP' ? <ArrowUpRight className="w-4 h-4 text-green-500" /> : <ArrowDownRight className="w-4 h-4 text-red-500" />}

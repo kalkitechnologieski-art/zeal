@@ -1,44 +1,44 @@
 "use client";
 
-import * as React from "react";
+import { format } from "date-fns";
+import { Check, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ChatMessage } from "@/hooks/useChat";
 
 interface MessageBubbleProps {
-  message: {
-    id: string;
-    senderId: string;
-    content: string;
-    timestamp: Date;
-    isAI?: boolean;
-  };
-  ownId?: string;
+  message: ChatMessage;
+  ownId: string;
 }
 
 export function MessageBubble({ message, ownId }: MessageBubbleProps) {
   const isOwn = message.senderId === ownId;
-  const isAI = message.isAI || false;
 
   return (
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm",
+          "max-w-[78%] rounded-2xl px-4 py-2.5 shadow-sm",
           isOwn
-            ? "bg-[#9D7DC5] text-white"
-            : isAI
-            ? "bg-[#F4E8F7] dark:bg-gray-800 border border-[#9D7DC5]/30 text-[#5E4B8B] dark:text-white"
-            : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white"
+            ? "bg-gradient-to-br from-[#9D7DC5] to-[#533AFD] text-white"
+            : "bg-[#F4E8F7] dark:bg-gray-800 text-[#5E4B8B] dark:text-white",
         )}
       >
         <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-        <span className="text-[10px] opacity-70 mt-1 block text-right">
-          {new Intl.DateTimeFormat("en-US", {
-            hour: "numeric",
-            minute: "numeric",
-          }).format(message.timestamp)}
-          {isAI && " 🤖"}
-        </span>
+        <div
+          className={cn(
+            "flex items-center justify-end gap-1 mt-1 text-[10px]",
+            isOwn ? "text-white/70" : "text-[#B8A1D9]",
+          )}
+        >
+          <span>{format(new Date(message.createdAt), "HH:mm")}</span>
+          {isOwn && (
+            message.readAt
+              ? <CheckCheck className="w-3 h-3" aria-label="Read" />
+              : <Check className="w-3 h-3" aria-label="Sent" />
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

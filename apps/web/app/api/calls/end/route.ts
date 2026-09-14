@@ -4,6 +4,7 @@ import { prisma, withTransaction } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode, InsufficientBalanceError } from "@/lib/errors";
 import { Ledger } from "@/lib/wallet/ledger";
 import { uploadToR2 } from "@/lib/storage/r2";
+import { serverPublish } from "@/lib/realtime/server";
 import { z } from "zod";
 
 const EndCallSchema = z.object({
@@ -20,15 +21,12 @@ export const POST = withErrorHandler(async (req: Request) => {
   const body = await req.json();
   const { sessionId, recordingFile, rating, review } = EndCallSchema.parse(body);
 
-  // Fetch session with related data
   const callSession = await prisma.callSession.findUnique({
     where: { id: sessionId },
     include: {
       booking: {
         include: {
-          consultant: {
-            include: { user: { include: { wallet: true } } },
-          },
+          consultant: { include: { user: { include: { wallet: true } } } },
           user: { include: { wallet: true } },
         },
       },
@@ -39,12 +37,15 @@ export const POST = withErrorHandler(async (req: Request) => {
     throw new AppError("Session not found", 404, ErrorCode.SESSION_NOT_FOUND);
   }
 
-  // Authorization
   if (callSession.userId !== userId && callSession.booking?.consultant.userId !== userId) {
     throw new AppError("Not authorized", 403, ErrorCode.AUTH_FORBIDDEN);
   }
 
-  // Idempotency: already ended
+  // AI sessions have no booking; guard before dereferencing .booking
+  if (!callSession.isAI && !callSession.booking) {
+    throw new AppError("Session has no booking", 500, ErrorCode.SESSION_NOT_FOUND);
+  }
+
   if (callSession.status === "ENDED") {
     return NextResponse.json({
       success: true,
@@ -53,14 +54,8 @@ export const POST = withErrorHandler(async (req: Request) => {
     });
   }
 
-  // Guard: AI sessions have no booking
-  if (!callSession.isAI && !callSession.booking) {
-    throw new AppError("Session has no booking", 500, ErrorCode.SESSION_NOT_FOUND);
-  }
-
   const now = new Date();
-  const startTime = callSession.startTime;
-  const durationSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+  const durationSeconds = Math.floor((now.getTime() - callSession.startTime.getTime()) / 1000);
 
   if (durationSeconds < 1) {
     throw new AppError("Call duration too short", 400, ErrorCode.VALIDATION_INPUT);
@@ -68,23 +63,20 @@ export const POST = withErrorHandler(async (req: Request) => {
 
   const ratePerMinute = callSession.booking?.consultant.perMinuteRate || 50;
   const amount = (durationSeconds / 60) * ratePerMinute;
-  const platformFee = amount * 0.10;
+  const platformFee = amount * 0.1;
   const consultantEarning = amount - platformFee;
 
-  // Upload recording if provided
   let recordingUrl: string | null = null;
   if (recordingFile) {
     try {
-      const key = `recordings/${sessionId}/${Date.now()}.mp4`;
+      const key = "recordings/" + sessionId + "/" + Date.now() + ".mp4";
       recordingUrl = await uploadToR2(recordingFile, key);
-    } catch (_) {
-      // Continue without recording
+    } catch {
+      /* recording upload is best-effort */
     }
   }
 
-  // Execute atomic transaction
   const result = await withTransaction(async (tx) => {
-    // 1. Update session
     const updatedSession = await tx.callSession.update({
       where: { id: sessionId },
       data: {
@@ -97,7 +89,6 @@ export const POST = withErrorHandler(async (req: Request) => {
       },
     });
 
-    // 2. Charge user wallet
     if (callSession.userId && amount > 0) {
       const userWallet = await tx.wallet.findUnique({
         where: { userId: callSession.userId },
@@ -108,32 +99,31 @@ export const POST = withErrorHandler(async (req: Request) => {
       if (userWallet.balance < amount) {
         throw new InsufficientBalanceError(amount, userWallet.balance);
       }
-
-      // Debit
       await Ledger.createTransaction({
         walletId: userWallet.id,
         type: "PAYMENT",
         amount: -amount,
-        description: `Consultation fee (session ${sessionId})`,
+        description: "Consultation fee (session " + sessionId + ")",
         referenceId: sessionId,
       });
     }
 
-    // 3. Credit consultant
-    const consultantWallet = await tx.wallet.findUnique({
-      where: { userId: callSession.booking!.consultant.userId },
-    });
+    const consultantWallet = callSession.booking
+      ? await tx.wallet.findUnique({
+          where: { userId: callSession.booking.consultant.userId },
+        })
+      : null;
+
     if (consultantWallet && consultantEarning > 0) {
       await Ledger.createTransaction({
         walletId: consultantWallet.id,
         type: "COMMISSION",
         amount: consultantEarning,
-        description: `Earnings from session ${sessionId}`,
-        referenceId: sessionId,
+        description: "Earnings from session " + sessionId,
+        referenceId: sessionId + ":earnings",
       });
     }
 
-    // 4. Update booking
     if (callSession.bookingId) {
       await tx.booking.update({
         where: { id: callSession.bookingId },
@@ -151,6 +141,29 @@ export const POST = withErrorHandler(async (req: Request) => {
     return updatedSession;
   });
 
+  // ─── Realtime publishes AFTER the transaction commits ──────────────
+  if (callSession.bookingId) {
+    await serverPublish(
+      "booking:" + callSession.bookingId,
+      "call:ended",
+      { sessionId, durationSeconds, amount },
+    );
+  }
+  if (callSession.userId) {
+    await serverPublish(
+      "user:" + callSession.userId,
+      "wallet:updated",
+      { sessionId, charged: amount },
+    );
+  }
+  if (callSession.booking?.consultant.userId) {
+    await serverPublish(
+      "user:" + callSession.booking.consultant.userId,
+      "wallet:updated",
+      { sessionId, earned: consultantEarning },
+    );
+  }
+
   return NextResponse.json({
     success: true,
     session: result,
@@ -161,4 +174,3 @@ export const POST = withErrorHandler(async (req: Request) => {
   });
 });
 
-// BATCH2_APPLIED

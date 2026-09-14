@@ -19,6 +19,6 @@ export const monitoringConfig = {
 export const metrics = {
   collect: (name: string, value: number) => {
     // In production, send to monitoring service
-    console.log(`[Metric] ${name}: ${value}`);
+    console.debug(`[Metric] ${name}: ${value}`);
   },
 };

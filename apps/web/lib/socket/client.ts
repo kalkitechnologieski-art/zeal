@@ -26,10 +26,10 @@ export function getSocket(token?: string): Socket | null {
         console.warn('[WebSocket] Connection error:', err.message);
       });
       socket.on('connect', () => {
-        console.log('[WebSocket] Connected');
+        console.debug('[WebSocket] Connected');
       });
       socket.on('disconnect', () => {
-        console.log('[WebSocket] Disconnected');
+        console.debug('[WebSocket] Disconnected');
       });
     } catch (err) {
       console.warn('[WebSocket] Initialization error:', err);

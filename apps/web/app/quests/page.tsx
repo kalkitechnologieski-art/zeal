@@ -1,122 +1,46 @@
 "use client";
-
-import * as React from "react";
-import { useState, useEffect } from "react";
-import { Sparkles, Trophy, Zap } from "lucide-react";
-import { QuestCard } from "@/components/quests/QuestCard";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@zeal/ui";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { Trophy, Loader2, Zap } from "lucide-react";
+import { EmptyState } from "@/components/shared/EmptyState";
+
+interface Quest { id: string; name: string; description: string; type: string; requirement: number; reward: number; icon: string; }
 
 export default function QuestsPage() {
-  const [quests, setQuests] = useState<any[]>([]);
-  const [progress, setProgress] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery<Quest[]>({
+    queryKey: ["quests"],
+    queryFn: async () => { const res = await fetch("/api/quests"); if (!res.ok) throw new Error("Failed"); return res.json(); },
+  });
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/quests").then((res) => res.json()),
-      fetch("/api/quests/progress").then((res) => res.json()),
-    ])
-      .then(([questsData, progressData]) => {
-        setQuests(questsData);
-        setProgress(progressData);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, []);
-
-  const handleComplete = async (questId: string) => {
-    try {
-      const res = await fetch(`/api/quests/${questId}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (res.ok) {
-        // Refresh progress
-        const newProgress = await fetch("/api/quests/progress").then((r) => r.json());
-        setProgress(newProgress);
-      }
-    } catch (error) {
-      console.error("Error completing quest:", error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12 text-[#B8A1D9] dark:text-gray-400">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 bg-[#9D7DC5] rounded-full animate-bounce" />
-          <span className="w-1.5 h-1.5 bg-[#9D7DC5] rounded-full animate-bounce [animation-delay:0.2s]" />
-          <span className="w-1.5 h-1.5 bg-[#9D7DC5] rounded-full animate-bounce [animation-delay:0.4s]" />
-        </div>
-      </div>
-    );
-  }
-
-  const dailyQuests = quests.filter((q) => q.type === "daily");
-  const weeklyQuests = quests.filter((q) => q.type === "weekly");
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#9D7DC5]" /></div>;
+  const quests = data || [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="max-w-3xl mx-auto px-4 py-6"
-    >
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-[#FFD700]" /> Quests
-        </h1>
-        <div className="flex items-center gap-1 text-sm text-[#B8A1D9] dark:text-gray-400">
-          <Zap className="w-4 h-4 text-[#FFD700]" />
-          <span>Earn Sparks by completing quests</span>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-3xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white flex items-center gap-2 mb-2"><Trophy className="w-6 h-6 text-[#FFD700]" /> Quests</h1>
+      <p className="text-sm text-[#B8A1D9] mb-6 flex items-center gap-1"><Zap className="w-4 h-4 text-[#FFD700]" /> Complete quests to earn Sparks</p>
+      {quests.length === 0 ? (
+        <EmptyState icon={Trophy} title="No quests available" description="Check back soon for new challenges." />
+      ) : (
+        <div className="space-y-4">
+          {quests.map((q, idx) => (
+            <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="bg-white dark:bg-gray-900 rounded-2xl border border-[#E1C5E7] dark:border-gray-700 p-5">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">{q.icon}</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-[#5E4B8B] dark:text-white">{q.name}</h3>
+                  <p className="text-sm text-[#B8A1D9] mt-0.5">{q.description}</p>
+                  <div className="flex items-center justify-between mt-3">
+                    <span className="text-xs text-[#B8A1D9]">{q.type} · {q.requirement} required</span>
+                    <span className="text-sm font-medium text-[#FFD700] flex items-center gap-1"><Zap className="w-4 h-4" /> +{q.reward}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
-      </div>
-
-      <Tabs defaultValue="daily">
-        <TabsList className="w-full">
-          <TabsTrigger value="daily">📅 Daily</TabsTrigger>
-          <TabsTrigger value="weekly">📆 Weekly</TabsTrigger>
-        </TabsList>
-        <TabsContent value="daily">
-          <div className="space-y-4 mt-4">
-            {dailyQuests.length === 0 ? (
-              <div className="text-center py-8 text-[#B8A1D9] dark:text-gray-400">
-                No daily quests available. Check back tomorrow!
-              </div>
-            ) : (
-              dailyQuests.map((quest) => (
-                <QuestCard
-                  key={quest.id}
-                  quest={quest}
-                  progress={progress[quest.id] || null}
-                  onComplete={handleComplete}
-                />
-              ))
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="weekly">
-          <div className="space-y-4 mt-4">
-            {weeklyQuests.length === 0 ? (
-              <div className="text-center py-8 text-[#B8A1D9] dark:text-gray-400">
-                No weekly quests available. Check back next week!
-              </div>
-            ) : (
-              weeklyQuests.map((quest) => (
-                <QuestCard
-                  key={quest.id}
-                  quest={quest}
-                  progress={progress[quest.id] || null}
-                  onComplete={handleComplete}
-                />
-              ))
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+      )}
     </motion.div>
   );
 }
+

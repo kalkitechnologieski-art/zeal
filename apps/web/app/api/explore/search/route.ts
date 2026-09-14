@@ -9,7 +9,7 @@ export const GET = withErrorHandler(async (req: Request) => {
 
   if (!q || q.length < 2) return NextResponse.json({ results: [] });
 
-  const results: any[] = [];
+  const results: unknown[] = [];
 
   // Search consultants
   if (type === "all" || type === "consultant") {

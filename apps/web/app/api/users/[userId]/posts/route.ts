@@ -1,16 +1,35 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
+import { prisma } from "@zeal/database";
+import { withErrorHandler } from "@/lib/errors";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ userId: string }> }
-) {
-  const { userId } = await params;
+export const GET = withErrorHandler(
+  async (_req: Request, { params }: { params: Promise<{ userId: string }> }) => {
+    const { userId } = await params;
 
-  // Mock data – replace with database query
-  const posts = [
-    { id: "p1", imageUrl: "https://picsum.photos/seed/1/600/600", cheerCount: 12, commentCount: 3 },
-    { id: "p2", imageUrl: "https://picsum.photos/seed/2/600/600", cheerCount: 25, commentCount: 8 },
-  ];
-  return NextResponse.json(posts);
-}
+    const posts = await prisma.post.findMany({
+      where: { authorId: userId, isFlagged: false },
+      orderBy: { createdAt: "desc" },
+      take: 60,
+      select: {
+        id: true,
+        content: true,
+        mediaUrls: true,
+        cheerCount: true,
+        commentCount: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      posts.map((p) => ({
+        id: p.id,
+        imageUrl: p.mediaUrls?.[0] || null,
+        content: p.content,
+        cheerCount: p.cheerCount,
+        commentCount: p.commentCount,
+        createdAt: p.createdAt,
+      })),
+    );
+  },
+);
+

@@ -1,60 +1,58 @@
 "use client";
-
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Wallet, ArrowUpRight } from "lucide-react";
+import { DollarSign, Wallet, ArrowUpRight, Loader2 } from "lucide-react";
 import { formatCurrency } from "@zeal/utils";
 
-export default function ConsultantEarningsPage() {
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [upiId, setUpiId] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+interface EarningsData {
+  balance: number;
+  pendingOut: number;
+  daily: Array<{ date: string; amount: number }>;
+}
 
-  const { data, isLoading, refetch } = useQuery({
+export default function ConsultantEarningsPage() {
+  const qc = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const { data, isLoading } = useQuery<EarningsData>({
     queryKey: ["consultant", "earnings"],
     queryFn: async () => {
       const res = await fetch("/api/consultant/earnings?days=30");
-      if (!res.ok) throw new Error("Failed to load earnings");
+      if (!res.ok) throw new Error("Failed");
       return res.json();
     },
   });
 
-  const handleWithdraw = async () => {
-    const amount = Number(withdrawAmount);
-    if (!amount || amount < 100) {
-      setMessage("Minimum withdrawal is ₹100");
-      return;
-    }
-    setSubmitting(true);
-    setMessage(null);
-
-    try {
+  const withdraw = useMutation({
+    mutationFn: async () => {
+      const amt = Number(amount);
       const res = await fetch("/api/consultant/earnings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, upiId }),
+        body: JSON.stringify({ amount: amt, upiId }),
       });
-
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error?.message || "Withdrawal failed");
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message || "Failed");
       }
+      return res.json();
+    },
+    onSuccess: () => {
+      setMessage({ type: "ok", text: "Withdrawal requested. Admin will review within 24 hours." });
+      setAmount("");
+      qc.invalidateQueries({ queryKey: ["consultant", "earnings"] });
+    },
+    onError: (e) => setMessage({ type: "err", text: e instanceof Error ? e.message : "Failed" }),
+  });
 
-      setMessage("Withdrawal requested! Admin will review within 24 hours.");
-      setWithdrawAmount("");
-      refetch();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#9D7DC5]" /></div>;
 
-  const balance = data?.balance ?? 0;
   const daily = data?.daily ?? [];
-  const maxAmount = Math.max(...daily.map((d: { amount: number }) => d.amount), 1);
+  const max = Math.max(...daily.map((d) => d.amount), 1);
+  const balance = data?.balance ?? 0;
 
   return (
     <div className="space-y-6">
@@ -62,101 +60,58 @@ export default function ConsultantEarningsPage() {
         <DollarSign className="w-6 h-6 text-[#9D7DC5]" /> Earnings
       </h1>
 
-      {/* Balance card */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[#9D7DC5] via-[#7A5A9E] to-[#533AFD] text-white shadow-2xl shadow-[#9D7DC5]/30"
-      >
-        <div className="flex items-start justify-between mb-6">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[#9D7DC5] via-[#7A5A9E] to-[#533AFD] text-white shadow-2xl">
+        <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-white/70 mb-1">Available Balance</p>
-            <p className="text-4xl md:text-5xl font-bold tracking-tight">
-              {formatCurrency(balance)}
-            </p>
+            <p className="text-4xl md:text-5xl font-bold">{formatCurrency(balance)}</p>
           </div>
-          <div className="p-3 rounded-2xl bg-white/15 backdrop-blur-sm">
-            <Wallet className="w-6 h-6" />
-          </div>
+          <div className="p-3 rounded-2xl bg-white/15"><Wallet className="w-6 h-6" /></div>
         </div>
+        {(data?.pendingOut ?? 0) > 0 && (
+          <div className="mt-4 text-sm bg-white/10 rounded-xl px-3 py-2">
+            {formatCurrency(data!.pendingOut)} pending withdrawal
+          </div>
+        )}
       </motion.div>
 
-      {/* Chart */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card-3d p-5"
-      >
-        <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2 mb-4">
-          <TrendingUp className="w-4 h-4 text-[#9D7DC5]" /> Last 30 days
-        </h2>
-        {isLoading ? (
-          <div className="h-40 rounded-xl bg-[#F4E8F7] dark:bg-gray-800 animate-pulse" />
-        ) : daily.length === 0 ? (
-          <p className="text-center py-8 text-[#B8A1D9] text-sm">
-            No earnings yet
-          </p>
+      <div className="glass-card-3d p-5">
+        <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white mb-4">Last 30 days</h2>
+        {daily.length === 0 ? (
+          <p className="text-center py-8 text-[#B8A1D9] text-sm">No earnings yet</p>
         ) : (
           <div className="flex items-end gap-1 h-40">
-            {daily.map((d: { date: string; amount: number }) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group">
-                <div
-                  className="w-full rounded-t-lg bg-gradient-to-t from-[#9D7DC5] to-[#533AFD] hover:opacity-90 transition-opacity"
-                  style={{ height: `${(d.amount / maxAmount) * 100}%`, minHeight: "4px" }}
-                  title={`${d.date}: ${formatCurrency(d.amount)}`}
-                />
+            {daily.map((d) => (
+              <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={d.date + ": " + formatCurrency(d.amount)}>
+                <div className="w-full rounded-t-lg bg-gradient-to-t from-[#9D7DC5] to-[#533AFD]" style={{ height: ((d.amount / max) * 100) + "%", minHeight: 4 }} />
               </div>
             ))}
           </div>
         )}
-      </motion.div>
+      </div>
 
-      {/* Withdraw */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="glass-card-3d p-5 space-y-4"
-      >
+      <div className="glass-card-3d p-5 space-y-4">
         <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2">
           <ArrowUpRight className="w-4 h-4 text-[#9D7DC5]" /> Withdraw Funds
         </h2>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="number"
-            placeholder="Amount (min ₹100)"
-            value={withdrawAmount}
-            onChange={(e) => setWithdrawAmount(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white"
-          />
-          <input
-            type="text"
-            placeholder="UPI ID (e.g. name@upi)"
-            value={upiId}
-            onChange={(e) => setUpiId(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white"
-          />
+          <input type="number" placeholder="Amount (min ₹100)" value={amount} onChange={(e) => setAmount(e.target.value)} className="px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white" min="100" />
+          <input type="text" placeholder="UPI ID (name@upi)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white" />
         </div>
-
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={handleWithdraw}
-          disabled={submitting || !withdrawAmount || !upiId}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium shadow-lg disabled:opacity-50"
+        <button
+          onClick={() => withdraw.mutate()}
+          disabled={!amount || !upiId || withdraw.isPending}
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium disabled:opacity-50"
         >
-          {submitting ? "Submitting..." : "Request Withdrawal"}
-        </motion.button>
-
+          {withdraw.isPending ? "Submitting…" : "Request Withdrawal"}
+        </button>
         {message && (
-          <p className={`text-sm text-center ${message.includes("requested") ? "text-green-600" : "text-red-500"}`}>
-            {message}
+          <p className={message.type === "ok" ? "text-sm text-green-600" : "text-sm text-red-500"} role={message.type === "err" ? "alert" : "status"}>
+            {message.text}
           </p>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
 
-// BATCH_F3_APPLIED

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverPublish } from "@/lib/realtime/server";
 import { getUserId } from "@/lib/auth";
 import { prisma, withTransaction } from "@zeal/database";
 import {
@@ -20,6 +21,23 @@ export const POST = withErrorHandler(async (req: Request) => {
   if (!userId) {
     throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
   }
+  // Idempotency: clients may retry POST /bookings on network failure.
+  // We honour an "Idempotency-Key" header. If a booking with the same
+  // key already exists for this user, return it unchanged.
+  const idempotencyKey = req.headers.get("idempotency-key");
+  if (idempotencyKey) {
+    const existing = await prisma.booking.findFirst({
+      where: { userId, paymentId: idempotencyKey },
+      include: {
+        consultant: { include: { user: true } },
+        user: true,
+      },
+    });
+    if (existing) {
+      return NextResponse.json({ booking: existing, idempotent: true });
+    }
+  }
+
 
   const body = await req.json();
   const { consultantId, scheduledAt, durationMinutes, externalEmail } =
@@ -114,6 +132,7 @@ export const POST = withErrorHandler(async (req: Request) => {
         consultantEarning,
         externalEmail: externalEmail || null,
         status: externalEmail ? "PENDING" : "CONFIRMED",
+        paymentId: idempotencyKey || null,
       },
       include: {
         consultant: { include: { user: true } },
@@ -157,7 +176,8 @@ export const POST = withErrorHandler(async (req: Request) => {
     console.warn("[Booking] Email failed:", err);
   }
 
-  return NextResponse.json({ booking });
+  await serverPublish("consultant:" + consultantId, "booking:created", { bookingId: booking.id, scheduledAt: booking.scheduledAt, userId });
+    return NextResponse.json({ booking });
 });
 
 // ─── GET: list user's bookings ───────────────────────────────────────────────

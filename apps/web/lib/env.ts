@@ -10,7 +10,7 @@ const EnvSchema = z.object({
 export function validateEnv() {
   try {
     EnvSchema.parse(process.env);
-    console.log("✅ Environment variables validated");
+    console.debug("✅ Environment variables validated");
   } catch (error) {
     console.error("❌ Invalid environment variables:", error);
     process.exit(1);

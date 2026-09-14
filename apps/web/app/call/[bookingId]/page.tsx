@@ -4,12 +4,23 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { CallInterface } from "@/components/call/CallInterface";
+import { captureError } from "@/lib/observability";
 
 interface CallToken {
   sessionId: string;
   token: string;
   wsUrl: string;
   roomName: string;
+}
+
+interface BookingResponse {
+  booking: {
+    id: string;
+    consultant: {
+      perMinuteRate: number;
+      user: { name: string | null; username: string; avatar: string | null };
+    };
+  };
 }
 
 export default function CallPage() {
@@ -19,6 +30,7 @@ export default function CallPage() {
 
   const [token, setToken] = useState<CallToken | null>(null);
   const [consultant, setConsultant] = useState<{ name: string; avatar: string | null; rate: number } | null>(null);
+  const [video, setVideo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,7 +39,6 @@ export default function CallPage() {
 
     (async () => {
       try {
-        // Start the call session
         const startRes = await fetch("/api/calls/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -35,46 +46,46 @@ export default function CallPage() {
         });
 
         if (!startRes.ok) {
-          const errData = await startRes.json().catch(() => ({}));
-          throw new Error(errData.error?.message || "Failed to start call");
+          const body = await startRes.json().catch(() => ({}));
+          const msg = (body as { error?: { message?: string } }).error?.message || "Failed to start call";
+          throw new Error(msg);
         }
 
-        const startData = await startRes.json();
+        const startData = (await startRes.json()) as {
+          sessionId: string; token: string; wsUrl: string; roomName: string;
+        };
         if (cancelled) return;
 
-        // Fetch booking details
-        const bookingRes = await fetch(`/api/bookings/${bookingId}`);
-        const bookingData = await bookingRes.json();
+        const bookingRes = await fetch("/api/bookings/" + bookingId);
+        if (!bookingRes.ok) throw new Error("Booking not found");
+        const bookingData = (await bookingRes.json()) as BookingResponse;
         if (cancelled) return;
 
-        if (!bookingData.booking) {
-          throw new Error("Booking not found");
-        }
+        const c = bookingData.booking.consultant;
+        const url = new URL(window.location.href);
+        const videoParam = url.searchParams.get("video") === "1";
+        setVideo(videoParam);
 
         setToken({
           sessionId: startData.sessionId,
           token: startData.token,
-          wsUrl: startData.wsUrl || "",
-          roomName: startData.roomName || `booking-${bookingId}`,
+          wsUrl: startData.wsUrl,
+          roomName: startData.roomName,
         });
 
         setConsultant({
-          name:
-            bookingData.booking.consultant?.user?.name ||
-            bookingData.booking.consultant?.user?.username ||
-            "Consultant",
-          avatar: bookingData.booking.consultant?.user?.avatar || null,
-          rate: bookingData.booking.consultant?.perMinuteRate || 50,
+          name: c.user.name || c.user.username || "Consultant",
+          avatar: c.user.avatar,
+          rate: c.perMinuteRate,
         });
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to join call");
+        captureError(err, { context: "callPage", bookingId });
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [bookingId]);
 
   if (error) {
@@ -82,12 +93,7 @@ export default function CallPage() {
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#1A0F26] text-white p-4">
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <p className="text-center max-w-sm">{error}</p>
-        <button
-          onClick={() => router.push("/bookings")}
-          className="mt-6 px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-colors"
-        >
-          Back to Bookings
-        </button>
+        <button onClick={() => router.push("/bookings")} className="mt-6 px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/20">Back to Bookings</button>
       </div>
     );
   }
@@ -96,7 +102,7 @@ export default function CallPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#1A0F26] text-white p-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#9D7DC5] mb-4" />
-        <p className="text-white/60">Preparing your session...</p>
+        <p className="text-white/60">Preparing your session…</p>
       </div>
     );
   }
@@ -111,8 +117,8 @@ export default function CallPage() {
       token={token.token}
       wsUrl={token.wsUrl}
       roomName={token.roomName}
+      video={video}
     />
   );
 }
 
-// BATCH_F2_APPLIED

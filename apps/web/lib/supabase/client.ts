@@ -1,33 +1,37 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Browser Supabase client.
- *
- * During Vercel builds (static prerendering), env vars may not be present.
- * We return a benign dummy client so the build completes without log spam.
- */
-export const createClient = () => {
+// Browser Supabase client for the web app.
+//
+// During Vercel builds or when env vars are missing, returns a benign dummy
+// client so the build completes. The dummy is cast to `SupabaseClient` at
+// the boundary — this is the only place where a cast is needed.
+
+export const createClient = (): SupabaseClient => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // Build-time or unconfigured: return dummy client silently
   if (!url || !key) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[Supabase] Missing env vars — using dummy client");
+    }
     return createDummyClient();
   }
 
   try {
     return createBrowserClient(url, key);
   } catch (err) {
-    // Never crash on client init — fall back to dummy
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[Supabase] Client init failed — using dummy client", err);
+    }
     return createDummyClient();
   }
 };
 
-// ─── Dummy client ─────────────────────────────────────────────────────────────
-function createDummyClient() {
+function createDummyClient(): SupabaseClient {
   const noop = async () => ({ data: { session: null, user: null }, error: null });
 
-  return {
+  const dummy = {
     auth: {
       getSession: noop,
       getUser: noop,
@@ -35,9 +39,17 @@ function createDummyClient() {
       signInWithPassword: noop,
       signUp: noop,
       signInWithOAuth: async () => ({ data: { url: null }, error: null }),
+      resetPasswordForEmail: async () => ({ data: null, error: null }),
+      updateUser: async () => ({ data: { user: null }, error: null }),
       onAuthStateChange: () => ({
         data: { subscription: { unsubscribe: () => {} } },
       }),
+      mfa: {
+        listFactors: async () => ({ data: { totp: [], all: [] }, error: null }),
+        getAuthenticatorAssuranceLevel: async () => ({ data: null, error: null }),
+        challenge: async () => ({ data: { id: "" }, error: null }),
+        verify: async () => ({ data: null, error: null }),
+      },
     },
     from: () => ({
       select: () => ({
@@ -58,5 +70,8 @@ function createDummyClient() {
       send: async () => {},
     }),
     removeChannel: async () => {},
-  } as never;
+  };
+
+  return dummy as unknown as SupabaseClient;
 }
+

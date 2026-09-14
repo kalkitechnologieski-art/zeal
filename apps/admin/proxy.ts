@@ -41,7 +41,7 @@ export default async function proxy(request: NextRequest) {
   }
 
   // Check admin role
-  const role = session.user?.user_metadata?.role || "USER";
+  const role = session.user?.app_metadata?.role || "USER";
   if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/login?error=Forbidden", request.url));
   }

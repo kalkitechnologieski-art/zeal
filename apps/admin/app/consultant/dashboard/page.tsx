@@ -50,7 +50,7 @@ export default function ConsultantDashboard() {
         <div className="glass-card-3d p-4">
           <h3 className="font-semibold text-[#5E4B8B] dark:text-white">Upcoming Bookings</h3>
           {stats?.upcomingBookings?.length ? (
-            stats.upcomingBookings.map((b: any) => (
+            stats.upcomingBookings.map((b: { id: string; userName?: string; scheduledAt: string; status: string }) => (
               <div key={b.id} className="flex items-center justify-between py-2 border-b border-[#E1C5E7]/30 dark:border-gray-700/30">
                 <div>
                   <p className="text-sm text-[#5E4B8B] dark:text-white">{b.userName}</p>

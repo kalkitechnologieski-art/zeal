@@ -24,14 +24,14 @@ export const createServerClientFromCookies = async () => {
           return undefined;
         }
       },
-      set(name: string, value: string, options: unknown) {
+      set(name: string, value: string, options: Record<string, unknown>) {
         try {
           cookieStore.set({ name, value, ...(options as object) });
         } catch {
           /* Headers already sent – ignore */
         }
       },
-      remove(name: string, options: unknown) {
+      remove(name: string, options: Record<string, unknown>) {
         try {
           cookieStore.set({ name, value: "", ...(options as object) });
         } catch {

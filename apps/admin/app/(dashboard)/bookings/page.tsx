@@ -86,7 +86,7 @@ function BookingsContent() {
 
       {/* Mobile card view */}
       <div className="block sm:hidden space-y-4">
-        {bookings.map((b: any) => (
+        {bookings.map((b: { id: string; status: string; scheduledAt: string; amount: number; user?: { name?: string | null } | null; consultant?: { user?: { name?: string | null } | null } | null }) => (
           <div key={b.id} className="glass-card-3d p-4">
             <div className="flex items-start justify-between">
               <div>
@@ -140,7 +140,7 @@ function BookingsContent() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E1C5E7] dark:divide-gray-700">
-            {bookings.map((b: any) => (
+            {bookings.map((b: { id: string; status: string; scheduledAt: string; amount: number; user?: { name?: string | null } | null; consultant?: { user?: { name?: string | null } | null } | null }) => (
               <tr key={b.id} className="hover:bg-[#F4E8F7] dark:hover:bg-gray-800/50 transition-colors">
                 <td className="p-3 text-sm text-[#5E4B8B] dark:text-white">{b.user?.name || 'N/A'}</td>
                 <td className="p-3 text-sm text-[#5E4B8B] dark:text-white">{b.consultant?.user?.name || 'N/A'}</td>

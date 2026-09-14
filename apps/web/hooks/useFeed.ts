@@ -2,7 +2,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 interface FeedResponse {
-  posts: any[];
+  posts: unknown[];
   nextCursor?: number;
 }
 

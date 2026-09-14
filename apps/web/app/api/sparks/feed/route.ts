@@ -1,57 +1,34 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
 
 export const GET = withErrorHandler(async (req: Request) => {
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
 
   const url = new URL(req.url);
-  const limit = parseInt(url.searchParams.get("limit") || "20");
-  const offset = parseInt(url.searchParams.get("offset") || "0");
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "40"), 200);
 
-  // For MVP, we show cheers on the user's own posts.
-  // In production, we could union cheers, comments, shares, follows, etc.
   const cheers = await prisma.cheer.findMany({
-    where: {
-      post: { authorId: userId },
-    },
+    where: { post: { authorId: userId } },
     include: {
-      user: {
-        select: {
-          id: true,
-          username: true,
-          avatar: true,
-        },
-      },
-      post: {
-        select: {
-          id: true,
-          content: true,
-        },
-      },
+      user: { select: { id: true, username: true, avatar: true } },
+      post: { select: { id: true, content: true } },
     },
     orderBy: { createdAt: "desc" },
     take: limit,
-    skip: offset,
   });
 
-  const activities = cheers.map((cheer) => ({
-    id: cheer.id,
-    type: "cheer",
-    actor: {
-      id: cheer.user.id,
-      username: cheer.user.username,
-      avatar: cheer.user.avatar,
-    },
-    target: {
-      id: cheer.post.id,
-      content: cheer.post.content,
-    },
+  const activities = cheers.map((c) => ({
+    id: c.id,
+    type: "cheer" as const,
+    actor: { id: c.user.id, username: c.user.username, avatar: c.user.avatar },
+    target: { id: c.post.id, content: c.post.content },
     sparksEarned: 2,
-    createdAt: cheer.createdAt,
+    createdAt: c.createdAt,
   }));
 
   return NextResponse.json(activities);
 });
+

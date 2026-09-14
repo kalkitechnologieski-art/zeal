@@ -22,11 +22,11 @@ export function useWebSocket(userId: string | undefined) {
     };
   }, [userId]);
 
-  const sendMessage = useCallback((event: string, data: any) => {
+  const sendMessage = useCallback((event: string, data: unknown) => {
     wsClient.emit(event, data);
   }, []);
 
-  const subscribe = useCallback((event: string, callback: (data: any) => void) => {
+  const subscribe = useCallback((event: string, callback: (data: unknown) => void) => {
     wsClient.on(event, callback);
     return () => wsClient.off(event, callback);
   }, []);

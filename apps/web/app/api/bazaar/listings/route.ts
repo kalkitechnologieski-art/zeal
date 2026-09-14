@@ -1,66 +1,53 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
-import { SparkBazaarListing } from "@zeal/types";
+import { prisma } from "@zeal/database";
+import { withErrorHandler } from "@/lib/errors";
 
-// Mock data – replace with database query
-const mockListings: SparkBazaarListing[] = [
-  {
-    id: "l1",
-    userId: "u1",
-    user: {
-      id: "u1",
-      name: "Astrologer Raj",
-      email: "raj@zeal.com",
-      avatar: "https://ui-avatars.com/api/?name=Raj&background=9D7DC5&color=fff",
-      sparks: 12500,
-      role: "USER",
-    },
-    sparks: 12500,
-    rank: 1,
-    tier: "gold",
-    isAvailable: true,
-  },
-  {
-    id: "l2",
-    userId: "u2",
-    user: {
-      id: "u2",
-      name: "Healer Priya",
-      email: "priya@zeal.com",
-      avatar: "https://ui-avatars.com/api/?name=Priya&background=9D7DC5&color=fff",
-      sparks: 8500,
-      role: "USER",
-    },
-    sparks: 8500,
-    rank: 2,
-    tier: "silver",
-    isAvailable: true,
-  },
-  {
-    id: "l3",
-    userId: "u3",
-    user: {
-      id: "u3",
-      name: "Tarot Sana",
-      email: "sana@zeal.com",
-      avatar: "https://ui-avatars.com/api/?name=Sana&background=9D7DC5&color=fff",
-      sparks: 3200,
-      role: "USER",
-    },
-    sparks: 3200,
-    rank: 3,
-    tier: "bronze",
-    isAvailable: false,
-  },
-];
+function tierFor(sparks: number): "gold" | "silver" | "bronze" {
+  if (sparks >= 10000) return "gold";
+  if (sparks >= 5000) return "silver";
+  return "bronze";
+}
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const tier = searchParams.get("tier") || "all";
+export const GET = withErrorHandler(async (req: Request) => {
+  const url = new URL(req.url);
+  const tierFilter = url.searchParams.get("tier");
 
-  const filtered = tier === "all"
-    ? mockListings
-    : mockListings.filter((l) => l.tier === tier);
+  const consultants = await prisma.consultant.findMany({
+    where: { status: "VERIFIED", isActive: true },
+    orderBy: [{ totalConsultations: "desc" }, { rating: "desc" }],
+    take: 50,
+    include: {
+      user: {
+        select: { id: true, name: true, username: true, avatar: true, sparks: true },
+      },
+    },
+  });
+
+  const items = consultants.map((c, idx) => {
+    const sparks = c.user.sparks;
+    const tier = tierFor(sparks);
+    return {
+      id: c.id,
+      userId: c.userId,
+      user: {
+        id: c.user.id,
+        name: c.user.name,
+        email: "",
+        avatar: c.user.avatar,
+        sparks: c.user.sparks,
+        role: "USER",
+      },
+      sparks,
+      rank: idx + 1,
+      tier,
+      isAvailable: true,
+    };
+  });
+
+  const filtered = tierFilter && tierFilter !== "all"
+    ? items.filter((i) => i.tier === tierFilter)
+    : items;
 
   return NextResponse.json(filtered);
-}
+});
+

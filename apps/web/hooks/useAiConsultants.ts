@@ -119,7 +119,7 @@ export function useAiConsultants(category?: string): UseAiConsultantsResult {
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log(`[useAiConsultants] Subscribed to ${channelName}`);
+          console.debug(`[useAiConsultants] Subscribed to ${channelName}`);
         } else if (status === "CHANNEL_ERROR") {
           setIsRealtime(false);
         }

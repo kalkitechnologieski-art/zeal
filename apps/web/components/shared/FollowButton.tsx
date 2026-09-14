@@ -1,36 +1,34 @@
 "use client";
-
-import * as React from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@zeal/ui";
-import { UserPlus, UserMinus } from "lucide-react";
+import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 
 interface FollowButtonProps {
   userId: string;
-  isFollowing: boolean;
-  onToggle: (userId: string, isFollowing: boolean) => void;
+  initialFollowing?: boolean;
+  onChange?: (following: boolean) => void;
 }
 
-export function FollowButton({ userId, isFollowing, onToggle }: FollowButtonProps) {
-  const [loading, setLoading] = React.useState(false);
-  const [following, setFollowing] = React.useState(isFollowing);
+export function FollowButton({ userId, initialFollowing = false, onChange }: FollowButtonProps) {
+  const [following, setFollowing] = useState(initialFollowing);
+  const [loading, setLoading] = useState(false);
 
-  const handleClick = async () => {
+  const handleClick = useCallback(async () => {
     setLoading(true);
+    const next = !following;
+    setFollowing(next);
     try {
-      const res = await fetch(`/api/users/${userId}/follow`, {
-        method: following ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/users/" + userId + "/follow", {
+        method: next ? "POST" : "DELETE",
       });
-      if (res.ok) {
-        setFollowing(!following);
-        onToggle(userId, !following);
-      }
-    } catch (error) {
-      console.error("Follow error:", error);
+      if (!res.ok) throw new Error("Failed");
+      onChange?.(next);
+    } catch {
+      setFollowing(!next);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, following, onChange]);
 
   return (
     <Button
@@ -40,11 +38,10 @@ export function FollowButton({ userId, isFollowing, onToggle }: FollowButtonProp
       disabled={loading}
       className="flex items-center gap-1"
     >
-      {following ? (
-        <><UserMinus className="w-4 h-4" /> Unfollow</>
-      ) : (
-        <><UserPlus className="w-4 h-4" /> Follow</>
-      )}
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" />
+        : following ? <><UserMinus className="w-4 h-4" /> Following</>
+        : <><UserPlus className="w-4 h-4" /> Follow</>}
     </Button>
   );
 }
+

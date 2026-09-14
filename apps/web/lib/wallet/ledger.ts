@@ -1,3 +1,30 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Prisma } from "@prisma/client";
+
+// P2034 = "Transaction failed due to a write conflict or a deadlock."
+// PostgreSQL raises this under concurrent writes. Prisma recommends
+// retrying with exponential backoff. See: https://pris.ly/d/transaction-conflict
+export async function withSerializableRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const isRetryable =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        (err.code === "P2034" || err.code === "P2028");
+      if (!isRetryable || attempt === maxRetries) throw err;
+      const delay = Math.min(50 * Math.pow(2, attempt), 1000);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastError;
+}
+
 import { prisma, withTransaction, TransactionType } from "@zeal/database";
 import { AppError, ErrorCode, InsufficientBalanceError } from "@/lib/errors";
 

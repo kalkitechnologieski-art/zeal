@@ -42,7 +42,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     );
   }
 
-  console.log("[Admin] Platform fee updated to " + feePercent + "% by " + adminId);
+  console.debug("[Admin] Platform fee updated to " + feePercent + "% by " + adminId);
   return NextResponse.json({ feePercent });
 });
 

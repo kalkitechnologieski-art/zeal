@@ -230,7 +230,7 @@ export function log(params: {
     } else if (level === "debug") {
       console.debug(formatted);
     } else {
-      console.log(formatted);
+      console.debug(formatted);
     }
   }
 

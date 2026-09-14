@@ -27,11 +27,11 @@ export function getAdminSocket(token?: string): Socket | null {
         }, 5000);
       });
       socket.on('connect', () => {
-        console.log('[AdminSocket] Connected to Zeal WebSocket');
+        console.debug('[AdminSocket] Connected to Zeal WebSocket');
         socket?.emit('admin:join', { role: 'admin' });
       });
       socket.on('disconnect', () => {
-        console.log('[AdminSocket] Disconnected');
+        console.debug('[AdminSocket] Disconnected');
       });
     } catch (err) {
       console.warn('[AdminSocket] Initialization error:', err);

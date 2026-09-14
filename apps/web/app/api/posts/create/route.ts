@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverPublish } from "@/lib/realtime/server";
 import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
@@ -91,7 +92,8 @@ export const POST = withErrorHandler(async (req: Request) => {
     },
   });
 
-  return NextResponse.json({ post, tags });
+  await serverPublish("feed:global", "post:created", { postId: post.id });
+    return NextResponse.json({ post, tags });
 });
 
 // BATCH3_APPLIED

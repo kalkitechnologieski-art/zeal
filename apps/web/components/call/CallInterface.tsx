@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mic,
-  MicOff,
-  Video as VideoIcon,
-  VideoOff,
-  PhoneOff,
-  Loader2,
-  AlertCircle,
+  Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff,
+  Monitor, MonitorOff, Loader2, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { SessionTimer } from "./SessionTimer";
-import { formatCurrency } from "@zeal/utils";
+import { VideoRoom } from "@/components/livekit/VideoRoom";
+import {
+  createCallRoom, connectCallRoom, subscribeToRoom,
+  snapshotParticipants,
+  type CallParticipant, type CallState,
+} from "@/lib/livekit/client";
+import { captureError, captureMessage } from "@/lib/observability";
+import { cn } from "@/lib/utils";
+import type { Room } from "livekit-client";
 
 interface CallInterfaceProps {
   bookingId: string;
@@ -24,59 +27,98 @@ interface CallInterfaceProps {
   token: string;
   wsUrl: string;
   roomName: string;
+  video?: boolean;
 }
 
 export function CallInterface({
   bookingId,
   consultantName,
-  consultantAvatar,
   ratePerMinute,
   sessionId,
   token,
   wsUrl,
-  roomName,
+  video = false,
 }: CallInterfaceProps) {
   const router = useRouter();
-  const [isActive, setIsActive] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true);
+  const roomRef = useRef<Room | null>(null);
+  const [state, setState] = useState<CallState>("connecting");
   const [error, setError] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<CallParticipant[]>([]);
   const [muted, setMuted] = useState(false);
-  const [videoOn, setVideoOn] = useState(false);
-  const [startTime] = useState(new Date());
-  const startTimeRef = useRef<Date>(startTime);
+  const [videoOn, setVideoOn] = useState(video);
+  const [screenShare, setScreenShare] = useState(false);
+  const [startTime] = useState(() => new Date());
 
-  // Attempt to connect via Metered (or fallback)
+  // Connect on mount
   useEffect(() => {
     let cancelled = false;
+    const room = createCallRoom();
+    roomRef.current = room;
+
+    const subs = subscribeToRoom(room);
+    const unsubParticipants = subs.onParticipants((list) => {
+      if (!cancelled) setParticipants(list);
+    });
+    const unsubState = subs.onState((s) => {
+      if (!cancelled) setState(s);
+    });
 
     (async () => {
       try {
-        // Best-effort: verify token is valid, then mark connected
-        await new Promise((r) => setTimeout(r, 800));
-        if (cancelled) return;
-
-        // If WebRTC SDK is available, hook it here:
-        // const { MeteredPeer } = await import("@metered-ca/realtime");
-        // const peer = new MeteredPeer({ apiKey: ... });
-        // await peer.join(roomName, token);
-        // ... attach streams
-
-        setIsActive(true);
-        setIsConnecting(false);
-        startTimeRef.current = new Date();
+        await connectCallRoom(room, { wsUrl, token, audio: true, video });
+        if (!cancelled) {
+          setState("connected");
+          captureMessage("call:connected", { bookingId, sessionId });
+        }
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Connection failed");
-        setIsConnecting(false);
+        const message = err instanceof Error ? err.message : "Failed to connect";
+        setError(message);
+        setState("failed");
+        captureError(err, { bookingId, sessionId });
       }
     })();
 
     return () => {
       cancelled = true;
+      unsubParticipants();
+      unsubState();
+      try { room.disconnect(); } catch { /* ignore */ }
+      roomRef.current = null;
     };
-  }, [roomName, token, wsUrl]);
+  }, [wsUrl, token, bookingId, sessionId, video]);
 
-  const handleEnd = async () => {
+  const toggleMic = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      const next = !room.localParticipant.isMicrophoneEnabled;
+      await room.localParticipant.setMicrophoneEnabled(next);
+      setMuted(!next);
+    } catch (e) { captureError(e, { context: "toggleMic" }); }
+  }, []);
+
+  const toggleVideo = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      const next = !room.localParticipant.isCameraEnabled;
+      await room.localParticipant.setCameraEnabled(next);
+      setVideoOn(next);
+    } catch (e) { captureError(e, { context: "toggleVideo" }); }
+  }, []);
+
+  const toggleScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      const next = !room.localParticipant.isScreenShareEnabled;
+      await room.localParticipant.setScreenShareEnabled(next);
+      setScreenShare(next);
+    } catch (e) { captureError(e, { context: "toggleScreenShare" }); }
+  }, []);
+
+  const handleEnd = useCallback(async () => {
     try {
       await fetch("/api/calls/end", {
         method: "POST",
@@ -84,135 +126,94 @@ export function CallInterface({
         body: JSON.stringify({ sessionId }),
       });
     } catch (err) {
-      console.warn("Failed to end call:", err);
+      captureError(err, { context: "endCall", sessionId });
     }
-    setIsActive(false);
+    try { await roomRef.current?.disconnect(); } catch { /* ignore */ }
     router.push("/bookings");
-  };
+  }, [sessionId, router]);
+
+  const retry = useCallback(() => {
+    setError(null);
+    setState("connecting");
+    window.location.reload();
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#1A0F26] text-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 md:py-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-            {consultantAvatar ? (
-              <img
-                src={consultantAvatar}
-                alt={consultantName}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <span className="font-semibold text-[#9D7DC5]">
-                {consultantName.charAt(0)}
-              </span>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="font-medium truncate">{consultantName}</p>
-            <p className="text-xs text-white/60">
-              {isConnecting
-                ? "Connecting..."
-                : isActive
-                ? "In session"
-                : "Disconnected"}
-            </p>
-          </div>
+      <div className="flex items-center justify-between px-4 py-3 md:py-4 border-b border-white/5">
+        <div className="min-w-0">
+          <p className="font-medium truncate">{consultantName}</p>
+          <p className="text-xs text-white/60">
+            {state === "connecting" && "Connecting…"}
+            {state === "connected" && (video ? "Video session" : "Audio session")}
+            {state === "reconnecting" && "Reconnecting…"}
+            {state === "failed" && "Connection failed"}
+            {state === "disconnected" && "Disconnected"}
+          </p>
         </div>
-
         <SessionTimer
           ratePerMinute={ratePerMinute}
-          active={isActive}
-          startTime={startTimeRef.current}
+          active={state === "connected"}
+          startTime={startTime}
         />
       </div>
 
-      {/* Main area */}
-      <div className="flex-1 relative flex items-center justify-center px-4">
-        <AnimatePresence>
-          {isConnecting && (
-            <motion.div
-              key="connecting"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
+      <div className="flex-1 overflow-hidden px-4 py-4 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          {state === "connecting" && (
+            <motion.div key="connecting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center">
               <Loader2 className="w-12 h-12 animate-spin text-[#9D7DC5] mx-auto mb-4" />
-              <p className="text-white/60">Connecting to {consultantName}...</p>
+              <p className="text-white/60">Preparing your session…</p>
             </motion.div>
           )}
 
-          {error && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center max-w-sm"
-            >
+          {state === "failed" && (
+            <motion.div key="failed" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center max-w-sm">
               <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-              <p className="text-red-200">{error}</p>
-              <button
-                onClick={() => router.push("/bookings")}
-                className="mt-4 px-6 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                Return to Bookings
-              </button>
+              <p className="text-red-200 mb-4">{error || "Could not connect to the call"}</p>
+              <div className="flex gap-2 justify-center">
+                <button onClick={retry} className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 flex items-center gap-2"><RefreshCw className="w-4 h-4" /> Retry</button>
+                <button onClick={() => router.push("/bookings")} className="px-5 py-2 rounded-xl bg-white/5 hover:bg-white/10">Leave</button>
+              </div>
             </motion.div>
           )}
 
-          {isActive && !isConnecting && (
-            <motion.div
-              key="active"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 180, damping: 22 }}
-              className="text-center"
-            >
-              <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="w-32 h-32 md:w-48 md:h-48 rounded-full mx-auto mb-6 bg-gradient-to-br from-[#9D7DC5]/30 to-[#533AFD]/20 flex items-center justify-center"
-              >
-                {consultantAvatar ? (
-                  <img
-                    src={consultantAvatar}
-                    alt={consultantName}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <span className="text-5xl md:text-6xl font-light text-white/80">
-                    {consultantName.charAt(0)}
-                  </span>
-                )}
-              </motion.div>
-              <p className="text-white/70 text-sm">
-                Session active · {formatCurrency(ratePerMinute)}/min
-              </p>
+          {(state === "connected" || state === "reconnecting") && (
+            <motion.div key="connected" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-5xl">
+              <VideoRoom participants={participants} layout={video ? "grid" : "speaker"} />
+              {state === "reconnecting" && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-amber-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Reconnecting…
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Controls */}
-      <div className="px-4 py-6 pb-8 flex items-center justify-center gap-4 md:gap-6">
+      <div className="px-4 py-6 pb-8 flex items-center justify-center gap-3 md:gap-5">
         <ControlButton
           icon={muted ? MicOff : Mic}
           label={muted ? "Unmute" : "Mute"}
-          onClick={() => setMuted(!muted)}
+          onClick={toggleMic}
           active={!muted}
         />
         <ControlButton
           icon={videoOn ? VideoIcon : VideoOff}
-          label={videoOn ? "Video off" : "Video on"}
-          onClick={() => setVideoOn(!videoOn)}
+          label={videoOn ? "Camera off" : "Camera on"}
+          onClick={toggleVideo}
           active={videoOn}
+        />
+        <ControlButton
+          icon={screenShare ? MonitorOff : Monitor}
+          label={screenShare ? "Stop share" : "Share screen"}
+          onClick={toggleScreenShare}
+          active={screenShare}
         />
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleEnd}
-          disabled={!isActive && !isConnecting}
-          className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg shadow-red-500/30 disabled:opacity-50"
+          className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg shadow-red-500/30"
           aria-label="End call"
         >
           <PhoneOff className="w-7 h-7" />
@@ -222,24 +223,22 @@ export function CallInterface({
   );
 }
 
-function ControlButton({
-  icon: Icon,
-  label,
-  onClick,
-  active,
-}: {
+interface ControlButtonProps {
   icon: typeof Mic;
   label: string;
   onClick: () => void;
   active: boolean;
-}) {
+}
+
+function ControlButton({ icon: Icon, label, onClick, active }: ControlButtonProps) {
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onClick}
-      className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${
-        active ? "bg-white/15" : "bg-white/5"
-      }`}
+      className={cn(
+        "w-14 h-14 rounded-full flex items-center justify-center transition-colors",
+        active ? "bg-white/15 hover:bg-white/25" : "bg-white/5 hover:bg-white/10",
+      )}
       aria-label={label}
     >
       <Icon className="w-6 h-6" />
@@ -247,4 +246,3 @@ function ControlButton({
   );
 }
 
-// BATCH_F2_APPLIED

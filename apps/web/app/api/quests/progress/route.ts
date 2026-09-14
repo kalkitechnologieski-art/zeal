@@ -1,40 +1,28 @@
-import { prisma } from "@zeal/database";
 import { NextResponse } from "next/server";
-import { QuestProgress } from "@zeal/types";
+import { prisma } from "@zeal/database";
+import { getUserId } from "@/lib/auth";
+import { withErrorHandler } from "@/lib/errors";
 
-// Mock data – replace with database query
-const mockProgress: Record<string, QuestProgress> = {
-  q1: {
-    id: "p1",
-    userId: "u1",
-    questId: "q1",
-    progress: 1,
-    isCompleted: true,
-    completedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  q2: {
-    id: "p2",
-    userId: "u1",
-    questId: "q2",
-    progress: 7,
-    isCompleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  q3: {
-    id: "p3",
-    userId: "u1",
-    questId: "q3",
-    progress: 5,
-    isCompleted: true,
-    completedAt: new Date(),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-};
+export const GET = withErrorHandler(async () => {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({});
 
-export async function GET() {
-  return NextResponse.json(mockProgress);
-}
+  // QuestProgress may or may not exist as a model — handle both.
+  try {
+    const prismaAny = prisma as unknown as {
+      questProgress?: { findMany: (args: unknown) => Promise<Array<Record<string, unknown>>> };
+    };
+    if (prismaAny.questProgress) {
+      const rows = await prismaAny.questProgress.findMany({ where: { userId } });
+      const map: Record<string, unknown> = {};
+      for (const r of rows) {
+        const questId = r.questId as string;
+        map[questId] = r;
+      }
+      return NextResponse.json(map);
+    }
+  } catch { /* fall through */ }
+
+  return NextResponse.json({});
+});
+

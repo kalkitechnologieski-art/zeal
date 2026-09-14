@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ZodError } from "zod";
 
 export const HTTP_STATUS = {

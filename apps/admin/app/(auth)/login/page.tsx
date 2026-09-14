@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
 
     // Check if user is admin (role from metadata)
     const { data: { user } } = await supabase.auth.getUser();
-    const role = user?.user_metadata?.role || "USER";
+    const role = user?.app_metadata?.role || "USER";
     if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
       setError("You are not authorized to access the admin panel.");
       await supabase.auth.signOut();

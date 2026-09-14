@@ -158,9 +158,9 @@ export const useAppStore = create<AppState>()(
         isOnline: state.isOnline,
       }),
       version: 2,
-      migrate: (persistedState: any, version: number) => {
+      migrate: (persistedState: unknown, version: number) => {
         if (version === 0 || version === 1) {
-          return { ...persistedState, activeCallSession: null, lastActivity: null };
+          return { ...(persistedState as Record<string, unknown>), activeCallSession: null, lastActivity: null };
         }
         return persistedState;
       },

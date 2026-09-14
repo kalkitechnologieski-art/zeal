@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverPublish } from "@/lib/realtime/server";
 import { getUserId } from "@/lib/auth";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
@@ -26,6 +27,7 @@ export const POST = withErrorHandler(async (req: Request, { params }: { params: 
   }
 
   if (booking.status === "CONFIRMED") {
+    await serverPublish("booking:" + id, "booking:updated", { bookingId: id, status: "CONFIRMED" });
     return NextResponse.json({ booking });
   }
 

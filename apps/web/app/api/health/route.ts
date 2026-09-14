@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zeal/database";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 interface CheckResult {
   name: string;
   status: "ok" | "degraded" | "down";
@@ -8,10 +11,7 @@ interface CheckResult {
   error?: string;
 }
 
-async function timedCheck(
-  name: string,
-  fn: () => Promise<void>,
-): Promise<CheckResult> {
+async function timedCheck(name: string, fn: () => Promise<void>): Promise<CheckResult> {
   const start = Date.now();
   try {
     await fn();
@@ -26,49 +26,42 @@ async function timedCheck(
   }
 }
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const start = Date.now();
   const checks: CheckResult[] = [];
 
-  // DB connectivity
-  checks.push(
-    await timedCheck("database", async () => {
-      await prisma.$queryRaw`SELECT 1`;
-    }),
-  );
+  checks.push(await timedCheck("database", async () => {
+    await prisma.$queryRaw`SELECT 1`;
+  }));
 
-  // Supabase env
-  checks.push(
-    await timedCheck("env-supabase", async () => {
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error("URL missing");
-      if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) throw new Error("Anon key missing");
-    }),
-  );
+  checks.push(await timedCheck("env-supabase", async () => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) throw new Error("URL missing");
+    if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) throw new Error("Anon key missing");
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("Service role key missing");
+  }));
 
-  // Realtime
-  checks.push(
-    await timedCheck("realtime", async () => {
-      if (process.env.NEXT_PUBLIC_REALTIME_ENABLED !== "true") {
-        throw new Error("Realtime not enabled");
-      }
-    }),
-  );
+  checks.push(await timedCheck("env-payments", async () => {
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) throw new Error("Razorpay key missing");
+    if (!process.env.RAZORPAY_KEY_SECRET) throw new Error("Razorpay secret missing");
+  }));
 
-  // Payments
-  checks.push(
-    await timedCheck("payments", async () => {
-      if (!process.env.RAZORPAY_KEY_ID) throw new Error("Razorpay key missing");
-    }),
-  );
+  checks.push(await timedCheck("env-ai", async () => {
+    if (!process.env.GROQ_API_KEY) throw new Error("Groq key missing");
+  }));
+
+  checks.push(await timedCheck("env-email", async () => {
+    if (!process.env.RESEND_API_KEY) throw new Error("Resend key missing");
+  }));
+
+  checks.push(await timedCheck("realtime-flag", async () => {
+    if (process.env.NEXT_PUBLIC_REALTIME_ENABLED !== "true") throw new Error("Realtime not enabled");
+  }));
 
   const overall = checks.every((c) => c.status === "ok")
     ? "ok"
     : checks.some((c) => c.status === "down")
-    ? "down"
-    : "degraded";
+      ? "down"
+      : "degraded";
 
   return NextResponse.json(
     {
@@ -88,4 +81,3 @@ export async function GET() {
   );
 }
 
-// VERCEL_SETUP_APPLIED

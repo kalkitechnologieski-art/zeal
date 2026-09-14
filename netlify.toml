@@ -1,6 +1,15 @@
 [build]
-  command = "npm run build && cp -r apps/web/.next .next"
+  # 1. Force Netlify to change directory into the web app BEFORE building
+  base = "apps/web"
+  
+  # 2. Run the local workspace build script
+  command = "npm run build"
+  
+  # 3. Publish the local .next folder (relative to apps/web)
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "24"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

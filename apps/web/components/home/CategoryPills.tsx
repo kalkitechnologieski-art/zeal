@@ -5,18 +5,18 @@ import { motion } from 'framer-motion';
 
 const categories = [
   { id: null, label: 'All', icon: 'All' },
-  { id: ConsultantCategory.ASTROLOGER, label: 'Astrologers', icon: '⭐' },
-  { id: ConsultantCategory.PSYCHOLOGIST, label: 'Psychologists', icon: '🧠' },
-  { id: ConsultantCategory.TAROT, label: 'Tarot Readers', icon: '🔮' },
-  { id: ConsultantCategory.NUMEROLOGIST, label: 'Numerologists', icon: '🔢' },
-  { id: ConsultantCategory.PALMIST, label: 'Palmists', icon: '🖐️' },
-  { id: ConsultantCategory.VASTU, label: 'Vastu Experts', icon: '🏠' },
-  { id: ConsultantCategory.REIKI, label: 'Reiki Masters', icon: '✨' },
-  { id: ConsultantCategory.LIFE_COACH, label: 'Life Coaches', icon: '🎯' },
-  { id: ConsultantCategory.HEALER, label: 'Healers', icon: '💫' },
-  { id: ConsultantCategory.MOTIVATIONAL_SPEAKER, label: 'Motivational Speakers', icon: '🎤' },
-  { id: ConsultantCategory.SPIRITUAL_GUIDE, label: 'Spiritual Guides', icon: '🕊️' },
-  { id: ConsultantCategory.YOGA_INSTRUCTOR, label: 'Yoga Instructors', icon: '🧘' },
+  { id: 'ASTROLOGER', label: 'Astrologers', icon: '⭐' },
+  { id: 'PSYCHOLOGIST', label: 'Psychologists', icon: '🧠' },
+  { id: 'TAROT', label: 'Tarot Readers', icon: '🔮' },
+  { id: 'NUMEROLOGIST', label: 'Numerologists', icon: '🔢' },
+  { id: 'PALMIST', label: 'Palmists', icon: '🖐️' },
+  { id: 'VASTU', label: 'Vastu Experts', icon: '🏠' },
+  { id: 'REIKI', label: 'Reiki Masters', icon: '✨' },
+  { id: 'LIFE_COACH', label: 'Life Coaches', icon: '🎯' },
+  { id: 'HEALER', label: 'Healers', icon: '💫' },
+  { id: 'MOTIVATIONAL_SPEAKER', label: 'Motivational Speakers', icon: '🎤' },
+  { id: 'SPIRITUAL_GUIDE', label: 'Spiritual Guides', icon: '🕊️' },
+  { id: 'YOGA_INSTRUCTOR', label: 'Yoga Instructors', icon: '🧘' },
 ];
 
 interface CategoryPillsProps {

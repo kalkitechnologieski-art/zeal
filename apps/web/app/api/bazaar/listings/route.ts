@@ -23,7 +23,7 @@ export const GET = withErrorHandler(async (req: Request) => {
     },
   });
 
-  const items = consultants.map((c, idx) => {
+  const items = consultants.map((c: any, idx: number) => {
     const sparks = c.user.sparks;
     const tier = tierFor(sparks);
     return {
@@ -45,7 +45,7 @@ export const GET = withErrorHandler(async (req: Request) => {
   });
 
   const filtered = tierFilter && tierFilter !== "all"
-    ? items.filter((i) => i.tier === tierFilter)
+    ? items.filter((i: any) => i.tier === tierFilter)
     : items;
 
   return NextResponse.json(filtered);

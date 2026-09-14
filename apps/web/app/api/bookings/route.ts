@@ -8,7 +8,7 @@ import {
   ErrorCode,
   InsufficientBalanceError,
 } from "@/lib/errors";
-import { Ledger } from "@/lib/wallet/ledger";
+import * as Ledger from "@/lib/wallet/ledger";
 import { generateToken, getCallAdapter } from "@/lib/calls";
 import { sendEmail } from "@/lib/emails";
 import { emailTemplates } from "@/lib/emails/templates";
@@ -109,7 +109,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   // ─── Create booking (atomic) ───────────────────────────────────────────────
-  const booking = await withTransaction(async (tx) => {
+  const booking = await withTransaction(async (tx: any) => {
     if (wallet && !externalEmail) {
       await Ledger.createTransaction({
         walletId: wallet.id,

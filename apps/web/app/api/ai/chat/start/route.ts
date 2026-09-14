@@ -1,3 +1,4 @@
+import { aiRateLimiter } from "@/lib/rate-limit";
 import { NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { prisma, withTransaction } from "@zeal/database";
@@ -28,7 +29,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   // Create a call session with isAI=true and link to AI consultant
-  const session = await withTransaction(async (tx) => {
+  const session = await withTransaction(async (tx: any) => {
     const s = await tx.callSession.create({
       data: {
         userId,

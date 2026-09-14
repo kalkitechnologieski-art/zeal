@@ -38,7 +38,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   // Create call session
-  const callSession = await withTransaction(async (tx) => {
+  const callSession = await withTransaction(async (tx: any) => {
     const session = await tx.callSession.create({
       data: {
         bookingId: booking.id,

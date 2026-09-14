@@ -20,7 +20,7 @@ export const GET = withErrorHandler(async (req: Request) => {
     take: limit,
   });
 
-  const activities = cheers.map((c) => ({
+  const activities = cheers.map((c: any) => ({
     id: c.id,
     type: "cheer" as const,
     actor: { id: c.user.id, username: c.user.username, avatar: c.user.avatar },

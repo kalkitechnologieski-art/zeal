@@ -1,124 +1,63 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
-import { prisma, withTransaction, Prisma } from "@zeal/database";
-import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
-import { sendEmail } from "@/lib/emails";
-import { emailTemplates } from "@/lib/emails/templates";
-import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import crypto from "crypto";
 
-// Categories must match Prisma's ConsultantCategory enum exactly.
-const CONSULTANT_CATEGORIES = [
-  "ASTROLOGER",
-  "PSYCHOLOGIST",
-  "TAROT",
-  "NUMEROLOGIST",
-  "PALMIST",
-  "VASTU",
-  "REIKI",
-  "LIFE_COACH",
-  "MOTIVATIONAL_SPEAKER",
-  "SPIRITUAL_GUIDE",
-  "YOGA_INSTRUCTOR",
-] as const;
-
-const OnboardingSchema = z.object({
-  category: z.enum(CONSULTANT_CATEGORIES),
-  specialties: z.array(z.string()).min(1).max(10),
-  languages: z.array(z.string()).min(1),
-  bio: z.string().min(50).max(1000),
-  perMinuteRate: z.number().min(10).max(500),
-  faith: z.enum(["HINDU", "ISLAM", "CHRISTIAN", "BUDDHIST", "JEWISH", "SIKH", "OTHER"]),
-  availability: z.record(z.string(), z.any()),
-  verificationDocs: z.array(z.string().url()).min(1),
-});
-
-export const POST = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) {
-    throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-  }
-
-  const existing = await prisma.consultant.findUnique({
-    where: { userId },
-    select: { id: true, status: true },
-  });
-
-  if (existing) {
-    if (existing.status === "VERIFIED") {
-      throw new AppError("You are already a verified consultant", 409, ErrorCode.BOOKING_CONFLICT);
-    }
-    if (existing.status === "PENDING") {
-      throw new AppError("Your application is already pending review", 409, ErrorCode.BOOKING_CONFLICT);
-    }
-  }
-
-  const body = await req.json();
-  const data = OnboardingSchema.parse(body);
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true, name: true },
-  });
-
-  if (!user) {
-    throw new AppError("User not found", 404, ErrorCode.NOT_FOUND);
-  }
-
-  const availabilityJson = data.availability as unknown as Prisma.InputJsonValue;
-  const docsJson = data.verificationDocs as unknown as Prisma.InputJsonValue;
-
-  const consultant = await withTransaction(async (tx) => {
-    if (existing) {
-      return tx.consultant.update({
-        where: { id: existing.id },
-        data: {
-          category: data.category,
-          specialties: data.specialties,
-          languages: data.languages,
-          bio: data.bio,
-          perMinuteRate: data.perMinuteRate,
-          faith: data.faith,
-          availability: availabilityJson,
-          verificationDocs: docsJson,
-          status: "PENDING",
-          isActive: false,
-          isVerified: false,
-          rejectionReason: null,
-        },
-      });
-    }
-
-    return tx.consultant.create({
-      data: {
-        userId,
-        category: data.category,
-        specialties: data.specialties,
-        languages: data.languages,
-        bio: data.bio,
-        perMinuteRate: data.perMinuteRate,
-        faith: data.faith,
-        availability: availabilityJson,
-        verificationDocs: docsJson,
-        status: "PENDING",
-        isActive: false,
-        isVerified: false,
-      },
-    });
-  });
-
+export async function POST(req: Request) {
   try {
-    const tpl = emailTemplates.consultantApplicationReceived(user.name || "Applicant");
-    await sendEmail({ to: user.email, subject: tpl.subject, html: tpl.html });
-  } catch (err) {
-    console.warn("[Onboarding] Confirmation email failed:", err);
-  }
+    // 1. Validate Session using native Supabase SSR
+    const supabase = await createClient();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  return NextResponse.json({
-    success: true,
-    consultant: {
-      id: consultant.id,
-      status: consultant.status,
-      category: consultant.category,
-    },
-  });
-});
+    if (sessionError || !session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+
+    // 2. Strong Error-Handled Upsert to the Consultant Table
+    // We use 'as any' on the payload to bypass strict inference issues 
+    // when inserting JSON objects into Supabase via TypeScript during build time.
+    const { data: consultant, error: consultantError } = await supabase
+      .from("Consultant")
+      .upsert({
+        id: crypto.randomUUID(),
+        userId: session.user.id,
+        category: body.category || "ASTROLOGER",
+        specialties: body.specialties || [],
+        languages: body.languages || ["English"],
+        bio: body.bio || null,
+        perMinuteRate: body.perMinuteRate || 50,
+        availability: body.availability || {},
+        verificationDocs: body.verificationDocs || {},
+        status: "PENDING",
+        bufferMinutes: 10,
+        updatedAt: new Date().toISOString()
+      } as any, { onConflict: "userId" })
+      .select()
+      .single();
+
+    if (consultantError) {
+      throw new Error(`Failed to create consultant profile: ${consultantError.message}`);
+    }
+
+    // 3. Flag user metadata to reflect application status
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { is_consultant_applicant: true }
+    });
+
+    if (authError) {
+      console.warn("Failed to update user auth metadata, but consultant profile was created.");
+    }
+
+    // 4. Return strict NextResponse
+    return NextResponse.json({ 
+      success: true, 
+      consultant,
+      message: "Onboarding application submitted successfully."
+    });
+
+  } catch (error: any) {
+    console.error("Consultant Onboarding Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

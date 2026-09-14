@@ -1,52 +1,46 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { createServerClientFromCookies } from "@zeal/database";
+import { withErrorHandler } from "@/lib/errors";
+
+export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async (req: Request) => {
-  // Allow unauthenticated users to see public posts
-  const userId = await getUserId();
-  
+  const supabase = await createServerClientFromCookies();
   const url = new URL(req.url);
-  const cursor = url.searchParams.get("cursor") || undefined;
+  const cursor = url.searchParams.get("cursor");
   const limit = parseInt(url.searchParams.get("limit") || "10");
 
-  // For MVP, show all posts to everyone
-  const posts = await prisma.post.findMany({
-    include: {
-      author: {
-        select: {
-          id: true,
-          username: true,
-          name: true,
-          avatar: true,
-        },
-      },
-      _count: {
-        select: { cheers: true, comments: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit + 1,
-    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-  });
+  let q = supabase
+    .from("Post")
+    .select(`
+      id, content, mediaUrls, cheerCount, commentCount, shareCount, createdAt,
+      author:User!Post_authorId_fkey (id, username, name, avatar)
+    `)
+    .eq("isFlagged", false)
+    .order("createdAt", { ascending: false })
+    .limit(limit + 1);
+
+  if (cursor) q = q.lt("createdAt", cursor);
+
+  const { data, error } = await q;
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   let nextCursor: string | undefined;
-  if (posts.length > limit) {
-    const last = posts.pop();
-    nextCursor = last?.id;
+  if (data && data.length > limit) {
+    const last = data.pop();
+    nextCursor = last?.createdAt;
   }
 
-  const formatted = posts.map((post) => ({
-    id: post.id,
-    content: post.content,
-    imageUrl: post.mediaUrls?.[0] || null,
-    author: post.author,
-    cheerCount: post._count.cheers,
-    commentCount: post._count.comments,
-    shareCount: post.shareCount,
-    createdAt: post.createdAt,
+  const posts = (data || []).map((p: Record<string, unknown>) => ({
+    id: p.id,
+    content: p.content,
+    imageUrl: Array.isArray(p.mediaUrls) && p.mediaUrls.length ? p.mediaUrls[0] : null,
+    author: p.author,
+    cheerCount: p.cheerCount,
+    commentCount: p.commentCount,
+    shareCount: p.shareCount,
+    createdAt: p.createdAt,
   }));
 
-  return NextResponse.json({ posts: formatted, nextCursor });
+  return NextResponse.json({ posts, nextCursor });
 });

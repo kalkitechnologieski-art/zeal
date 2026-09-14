@@ -1,36 +1,39 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { NotificationService } from "@/lib/notifications/service";
+import { createServerClientFromCookies, getUserId } from "@zeal/database";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
 
-export const GET = async (req: Request) => {
+export const dynamic = "force-dynamic";
+
+export const GET = withErrorHandler(async (req: Request) => {
   const userId = await getUserId();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-  try {
-    const url = new URL(req.url);
-    const limit = parseInt(url.searchParams.get("limit") || "50");
-    const offset = parseInt(url.searchParams.get("offset") || "0");
-    const result = await NotificationService.getNotifications(userId, { limit, offset });
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("[Notifications] Error:", error);
-    return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
-  }
-};
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
 
-export const PUT = async (req: Request) => {
+  const supabase = await createServerClientFromCookies();
+  const url = new URL(req.url);
+  const limit = parseInt(url.searchParams.get("limit") || "50");
+
+  const { data, error } = await supabase
+    .from("Notification")
+    .select("*")
+    .eq("userId", userId)
+    .order("createdAt", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new AppError(error.message, 500, ErrorCode.INTERNAL_SERVER);
+
+  const { count } = await supabase
+    .from("Notification")
+    .select("*", { count: "exact", head: true })
+    .eq("userId", userId)
+    .eq("read", false);
+
+  return NextResponse.json({ items: data || [], total: data?.length || 0, unreadCount: count || 0 });
+});
+
+export const PUT = withErrorHandler(async () => {
   const userId = await getUserId();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
-  }
-  try {
-    await NotificationService.markAllAsRead(userId);
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[Notifications] Error marking all read:", error);
-    return NextResponse.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, { status: 500 });
-  }
-};
-
-// AUTH_ENTERPRISE_APPLIED
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
+  const supabase = await createServerClientFromCookies();
+  await supabase.from("Notification").update({ read: true }).eq("userId", userId).eq("read", false);
+  return NextResponse.json({ success: true });
+});

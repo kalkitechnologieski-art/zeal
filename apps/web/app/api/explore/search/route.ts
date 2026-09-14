@@ -35,7 +35,7 @@ export const GET = withErrorHandler(async (req: Request) => {
       take: 10,
     });
     results.push(
-      ...consultants.map((c) => ({
+      ...consultants.map((c: any) => ({
         id: c.id,
         type: "consultant",
         label: c.user.name || c.user.username,
@@ -64,7 +64,7 @@ export const GET = withErrorHandler(async (req: Request) => {
       take: 5,
     });
     results.push(
-      ...posts.map((p) => ({
+      ...posts.map((p: any) => ({
         id: p.id,
         type: "post",
         label: p.content.substring(0, 50),

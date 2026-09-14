@@ -138,21 +138,21 @@ export class NotificationService {
           select: { id: true },
           take: 5000,
         });
-        userIds = users.map((u) => u.id);
+        userIds = users.map((u: any) => u.id);
       } else if (params.segment === "consultants") {
         const consultants = await prisma.consultant.findMany({
           where: { status: "VERIFIED" },
           select: { userId: true },
           take: 5000,
         });
-        userIds = consultants.map((c) => c.userId);
+        userIds = consultants.map((c: any) => c.userId);
       } else {
         const users = await prisma.user.findMany({
           where: { role: "USER" },
           select: { id: true },
           take: 5000,
         });
-        userIds = users.map((u) => u.id);
+        userIds = users.map((u: any) => u.id);
       }
     }
 

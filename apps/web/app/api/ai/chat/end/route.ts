@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getUserId } from "@/lib/auth";
 import { prisma, withTransaction } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
-import { Ledger } from "@/lib/wallet/ledger";
+import * as Ledger from "@/lib/wallet/ledger";
 import { z } from "zod";
 
 const AIEndSchema = z.object({
@@ -45,7 +45,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   const rate = session.aiConsultant?.isPaid ? session.aiConsultant.perMinuteRate : 0;
   const amount = (durationSeconds / 60) * rate;
 
-  const result = await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx: any) => {
     // Update session
     const updated = await tx.callSession.update({
       where: { id: sessionId },

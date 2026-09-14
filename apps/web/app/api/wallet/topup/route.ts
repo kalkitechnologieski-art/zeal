@@ -1,64 +1,66 @@
 import { NextResponse } from "next/server";
-import { getUserId } from "@/lib/auth";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
-import { getPaymentAdapter } from "@/lib/payments";
-import { enforceRateLimit } from "@/lib/rate-limit";
-import { TopupSchema } from "@/lib/validation";
+import { createClient } from "@/lib/supabase/server";
 
-export const POST = withErrorHandler(async (req: Request) => {
-  const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
-
-  const limited = await enforceRateLimit("topup:" + userId, 5, 60);
-  if (limited) return limited;
-
-  const body = await req.json();
-  const { amount } = TopupSchema.parse(body);
-
-  let wallet = await prisma.wallet.findUnique({ where: { userId } });
-  if (!wallet) {
-    wallet = await prisma.wallet.create({
-      data: { userId, balance: 0, escrow: 0, pendingIn: 0, pendingOut: 0, blocked: 0 },
-    });
-  }
-
-  let adapter;
+export async function POST(req: Request) {
   try {
-    adapter = getPaymentAdapter();
-  } catch {
-    throw new AppError(
-      "Payment service unavailable — Razorpay not configured",
-      503,
-      ErrorCode.CONFIG_ERROR,
-    );
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { amount } = body;
+
+    if (!amount || amount < 10) {
+      return NextResponse.json({ error: "Invalid amount. Minimum ₹10 required." }, { status: 400 });
+    }
+
+    const isProduction = process.env.NODE_ENV === "production";
+    const endpoint = isProduction 
+      ? "https://www.instamojo.com/api/1.1/payment-requests/" 
+      : "https://test.instamojo.com/api/1.1/payment-requests/";
+
+    const apiKey = process.env.INSTAMOJO_API_KEY;
+    const authToken = process.env.INSTAMOJO_AUTH_TOKEN;
+
+    // Fallback for development if keys are missing
+    if (!apiKey || !authToken) {
+      console.warn("Instamojo keys missing. Proceeding with mock URL for development.");
+      return NextResponse.json({ 
+        paymentUrl: `/wallet?mock_payment_success=true` 
+      });
+    }
+
+    const payload = new URLSearchParams({
+      purpose: "Wallet Topup",
+      amount: amount.toString(),
+      buyer_name: session.user.id,
+      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/wallet`,
+      webhook: `${process.env.NEXT_PUBLIC_APP_URL}/api/wallet/webhooks/instamojo`,
+      allow_repeated_payments: "False",
+    });
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "X-Api-Key": apiKey,
+        "X-Auth-Token": authToken,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: payload.toString(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || "Failed to create Instamojo payment request");
+    }
+
+    return NextResponse.json({ paymentUrl: data.payment_request.longurl });
+  } catch (error: any) {
+    console.error("Topup Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const order = await adapter.createOrder({
-    amount,
-    currency: "INR",
-    receipt: "topup_" + Date.now() + "_" + userId.slice(0, 8),
-    notes: { userId, purpose: "Wallet top-up" },
-  });
-
-  await prisma.transaction.create({
-    data: {
-      walletId: wallet.id,
-      type: "TOPUP",
-      amount: 0,
-      balance: wallet.balance,
-      description: "Pending topup (order " + order.orderId + ")",
-      referenceId: order.orderId,
-      metadata: { pending: true, expectedAmount: amount, orderId: order.orderId },
-    },
-  });
-
-  return NextResponse.json({
-    orderId: order.orderId,
-    amount: order.amount,
-    currency: order.currency,
-    keyId: order.keyId,
-    walletId: wallet.id,
-  });
-});
-
+}

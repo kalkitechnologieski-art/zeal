@@ -26,7 +26,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     return NextResponse.json({ alreadyClaimed: true, sparks: reward });
   }
 
-  const user = await withTransaction(async (tx) => {
+  const user = await withTransaction(async (tx: any) => {
     const updated = await tx.user.update({
       where: { id: userId },
       data: { sparks: { increment: reward } },

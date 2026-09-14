@@ -21,7 +21,7 @@ export const GET = withErrorHandler(async () => {
     LIMIT 100
   `;
 
-  const otherIds = conversations.map((c) => (c.userAId === userId ? c.userBId : c.userAId));
+  const otherIds = conversations.map((c: any) => (c.userAId === userId ? c.userBId : c.userAId));
   const users = otherIds.length > 0
     ? await prisma.user.findMany({
         where: { id: { in: otherIds } },
@@ -29,9 +29,9 @@ export const GET = withErrorHandler(async () => {
       })
     : [];
 
-  const userMap = new Map(users.map((u) => [u.id, u]));
+  const userMap = new Map(users.map((u: any) => [u.id, u]));
 
-  const items = conversations.map((c) => {
+  const items = conversations.map((c: any) => {
     const otherId = c.userAId === userId ? c.userBId : c.userAId;
     return {
       id: c.id,

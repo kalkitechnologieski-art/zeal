@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zeal/database";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,7 +25,7 @@ export async function GET(
 
   // Attempt 2: Supabase Service Role
   try {
-    const admin = getAdminClient();
+    const admin = createAdminClient();
     if (admin) {
       const { data, error } = await admin
         .from("AIConsultant")

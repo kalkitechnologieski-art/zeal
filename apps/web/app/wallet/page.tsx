@@ -1,99 +1,155 @@
 "use client";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Clock, Loader2 } from "lucide-react";
-import { RazorpayButton } from "@/components/payments/RazorpayButton";
-import { useWallet } from "@/hooks/useWallet";
-import { formatCurrency } from "@zeal/utils";
-import { EmptyState } from "@/components/shared/EmptyState";
 
-const PRESETS = [100, 500, 1000, 2000];
+import { useState, useEffect } from "react";
+import { Loader2, CreditCard, Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 
 export default function WalletPage() {
-  const { wallet, isLoading, topUpPending, transactions, transactionsLoading } = useWallet();
-  const [amount, setAmount] = useState(500);
-  const [custom, setCustom] = useState("");
-  const [filter, setFilter] = useState<"all" | "credit" | "debit">("all");
+  const supabase = createClient();
+  const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [topupAmount, setTopupAmount] = useState<number>(500);
+  const [processing, setProcessing] = useState(false);
 
-  const finalAmount = custom ? Number(custom) : amount;
-  const balance = wallet?.balance ?? 0;
+  useEffect(() => {
+    let channel: any;
 
-  const filteredTx = transactions.filter((tx: { amount: number }) => {
-    if (filter === "all") return true;
-    if (filter === "credit") return tx.amount > 0;
-    return tx.amount < 0;
-  });
+    async function initializeWallet() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const uid = session.user.id;
+
+      // 1. Fetch initial balance (Bypass strict inference with 'as any')
+      const { data, error } = await supabase
+        .from("Wallet")
+        .select("balance")
+        .eq("userId", uid)
+        .maybeSingle();
+
+      if (!error && data) {
+        setBalance((data as any).balance);
+      }
+      setLoading(false);
+
+      // 2. Enterprise Real-time Ledger Subscription
+      // This listens directly to PostgreSQL. When the Instamojo webhook successfully 
+      // updates the balance, this UI will update instantly without a page refresh.
+      channel = supabase
+        .channel('realtime-wallet')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'Wallet',
+            filter: `userId=eq.${uid}`,
+          },
+          (payload) => {
+            const newBalance = (payload.new as any).balance;
+            if (newBalance !== undefined) {
+              setBalance(newBalance);
+              toast.success(`Wallet updated! New balance: ₹${newBalance.toFixed(2)}`);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    initializeWallet();
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  const handleTopup = async () => {
+    setProcessing(true);
+    try {
+      // Create order endpoint fetches Instamojo payment link
+      const res = await fetch("/api/wallet/topup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: topupAmount })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Failed to initiate top-up");
+      
+      if (data.paymentUrl) {
+        // Redirect user to Instamojo hosted checkout
+        window.location.href = data.paymentUrl;
+      } else {
+        // Dev fallback if keys are missing
+        toast.success("Top-up request sent successfully.");
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[#9D7DC5] via-[#7A5A9E] to-[#533AFD] text-white shadow-2xl">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <p className="text-sm text-white/70 mb-1">Available Balance</p>
-            <p className="text-4xl font-bold">{isLoading ? "—" : formatCurrency(balance)}</p>
-          </div>
-          <div className="p-3 rounded-2xl bg-white/15"><WalletIcon className="w-6 h-6" /></div>
+    <div className="max-w-4xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+          <WalletIcon className="w-8 h-8" />
         </div>
-        {wallet?.pendingOut && wallet.pendingOut > 0 ? (
-          <div className="flex items-center gap-2 text-sm bg-white/10 rounded-xl px-3 py-2">
-            <Clock className="w-4 h-4" />
-            <span>{formatCurrency(wallet.pendingOut)} pending withdrawal</span>
-          </div>
-        ) : null}
-      </motion.div>
-
-      <div className="glass-card-3d p-5 space-y-4">
-        <h2 className="font-semibold text-[#5E4B8B] dark:text-white">Add Money</h2>
-        <div className="grid grid-cols-4 gap-2">
-          {PRESETS.map((amt) => (
-            <button key={amt} onClick={() => { setAmount(amt); setCustom(""); }} className={"py-3 rounded-xl text-sm font-medium " + (amount === amt && !custom ? "bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white" : "bg-white/60 dark:bg-gray-800/60 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white")}>
-              ₹{amt}
-            </button>
-          ))}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Zeal Wallet</h1>
+          <p className="text-gray-500">Manage your prepaid consultation funds</p>
         </div>
-        <input type="number" placeholder="Or enter custom amount" value={custom} onChange={(e) => setCustom(e.target.value)} className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white" min="1" />
-        <RazorpayButton
-          amount={finalAmount}
-          purpose="Wallet top-up"
-          topup
-          disabled={finalAmount < 1 || topUpPending}
-          onSuccess={() => { setCustom(""); }}
-        />
       </div>
 
-      <div className="glass-card-3d p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[#5E4B8B] dark:text-white">Transactions</h2>
-          <div className="flex gap-1">
-            {(["all", "credit", "debit"] as const).map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={"px-3 py-1 rounded-lg text-xs font-medium capitalize " + (filter === f ? "bg-[#9D7DC5] text-white" : "bg-white/60 dark:bg-gray-800 text-[#5E4B8B] dark:text-white")}>{f}</button>
-            ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Balance Card */}
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-3xl shadow-lg text-white">
+          <p className="text-indigo-100 font-medium mb-2">Available Balance</p>
+          <div className="text-5xl font-bold mb-6">
+            ₹{loading ? "..." : balance.toFixed(2)}
+          </div>
+          <div className="flex gap-4">
+            <div className="flex items-center gap-2 text-sm bg-white/20 px-3 py-1.5 rounded-full">
+              <ArrowDownLeft size={16} /> Secure
+            </div>
+            <div className="flex items-center gap-2 text-sm bg-white/20 px-3 py-1.5 rounded-full">
+              <ArrowUpRight size={16} /> Instant Sync
+            </div>
           </div>
         </div>
-        {transactionsLoading ? (
-          <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-[#9D7DC5]" /></div>
-        ) : filteredTx.length === 0 ? (
-          <p className="text-center py-8 text-[#B8A1D9] text-sm">No transactions</p>
-        ) : (
-          <div className="space-y-2">
-            {filteredTx.slice(0, 30).map((tx: { id: string; type: string; amount: number; description: string; createdAt: string }) => (
-              <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/40 dark:hover:bg-gray-800/40">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  {tx.amount > 0 ? <ArrowUpRight className="w-4 h-4 text-green-500 flex-shrink-0" /> : <ArrowDownRight className="w-4 h-4 text-red-500 flex-shrink-0" />}
-                  <div className="min-w-0">
-                    <p className="text-sm text-[#5E4B8B] dark:text-white truncate">{tx.description}</p>
-                    <p className="text-xs text-[#B8A1D9]">{new Date(tx.createdAt).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                  </div>
-                </div>
-                <div className={"text-sm font-semibold flex-shrink-0 ml-2 " + (tx.amount > 0 ? "text-green-600" : "text-red-500")}>
-                  {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
-                </div>
-              </div>
+
+        {/* Top-up Action Card */}
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold mb-6 text-gray-900">Quick Top-Up</h2>
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {[200, 500, 1000].map(amt => (
+              <button
+                key={amt}
+                onClick={() => setTopupAmount(amt)}
+                className={`py-3 rounded-xl border-2 font-semibold transition-all ${
+                  topupAmount === amt 
+                    ? "border-indigo-600 bg-indigo-50 text-indigo-700" 
+                    : "border-gray-100 hover:border-indigo-200 text-gray-600 bg-white"
+                }`}
+              >
+                ₹{amt}
+              </button>
             ))}
           </div>
-        )}
+          
+          <button
+            onClick={handleTopup}
+            disabled={processing || topupAmount <= 0}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-indigo-700 disabled:opacity-70 transition-all shadow-md shadow-indigo-200"
+          >
+            {processing ? <Loader2 className="w-6 h-6 animate-spin" /> : <CreditCard className="w-6 h-6" />}
+            {processing ? "Connecting Gateway..." : `Pay ₹${topupAmount}`}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-

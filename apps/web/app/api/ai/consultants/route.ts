@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@zeal/database";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
   // ─── Attempt 2: Supabase Service Role (bypasses RLS) ───────────────────
   try {
-    const admin = getAdminClient();
+    const admin = createAdminClient();
     if (!admin) {
       return NextResponse.json([], {
         headers: { "Cache-Control": "no-store, max-age=0" },

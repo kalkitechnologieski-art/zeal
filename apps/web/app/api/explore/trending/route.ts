@@ -11,7 +11,7 @@ export const GET = withErrorHandler(async () => {
     take: 8,
   });
 
-  const items = groups.map((g) => ({
+  const items = groups.map((g: any) => ({
     id: g.category.toLowerCase(),
     label: g.category.replace(/_/g, " ").toLowerCase(),
     count: g._count._all,

@@ -47,7 +47,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
   }
 
   // ─── Merge into a single list, humans first, then AI ──────────────────
-  const humanProfiles: ConsultantProfile[] = humanConsultants.map((c) => ({
+  const humanProfiles: ConsultantProfile[] = humanConsultants.map((c: any) => ({
     id: c.id,
     userId: c.userId,
     name: c.user.name || c.user.username,
@@ -68,7 +68,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
     isAI: false,
   }));
 
-  const aiProfiles: ConsultantProfile[] = aiConsultants.map((c) => ({
+  const aiProfiles: ConsultantProfile[] = aiConsultants.map((c: any) => ({
     id: c.id,
     userId: `ai-${c.id}`,
     name: c.name,

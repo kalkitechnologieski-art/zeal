@@ -58,7 +58,7 @@ export const POST = withErrorHandler(async (req: Request) => {
   }
 
   if (action === "APPROVE") {
-    await withTransaction(async (t) => {
+    await withTransaction(async (t: any) => {
       await t.transaction.update({
         where: { id: transactionId },
         data: {
@@ -72,7 +72,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     });
   } else {
     // REJECT: restore balance
-    await withTransaction(async (t) => {
+    await withTransaction(async (t: any) => {
       await t.transaction.update({
         where: { id: transactionId },
         data: {

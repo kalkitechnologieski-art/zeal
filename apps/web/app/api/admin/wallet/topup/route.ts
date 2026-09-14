@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@zeal/database";
 import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
 import { requireSuperAdmin, logAdminAction } from "@/lib/auth/admin";
-import { Ledger } from "@/lib/wallet/ledger";
+import * as Ledger from "@/lib/wallet/ledger";
 import { z } from "zod";
 
 const TopupSchema = z.object({ amount: z.number().positive().max(100000) });

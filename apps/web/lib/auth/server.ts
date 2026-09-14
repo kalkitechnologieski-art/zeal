@@ -1,4 +1,4 @@
-import { createServerClientFromCookies } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Returns the authenticated user's ID, or null.
@@ -10,7 +10,7 @@ import { createServerClientFromCookies } from "@/lib/supabase/server";
  */
 export async function getUserId(): Promise<string | null> {
   try {
-    const supabase = await createServerClientFromCookies();
+    const supabase = await createClient();
     if (!supabase) return null;
 
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -37,7 +37,7 @@ export async function getUserId(): Promise<string | null> {
  */
 export async function getServerSession() {
   try {
-    const supabase = await createServerClientFromCookies();
+    const supabase = await createClient();
     if (!supabase) return { user: null, session: null };
 
     const { data: { session }, error } = await supabase.auth.getSession();

@@ -1,103 +1,49 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
-import { Ledger } from "@/lib/wallet/ledger";
-import { serverPublish } from "@/lib/realtime/server";
+import * as Ledger from "@/lib/wallet/ledger";
 
-interface InstamojoPayload {
-  payment_request_id?: string;
-  payment_status?: string;
-  amount?: string | number;
-}
-
-function verifySignature(body: string, signature: string, secret: string): boolean {
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex");
-  if (expected.length !== signature.length) return false;
+export async function POST(req: Request) {
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected),
-      Buffer.from(signature),
-    );
-  } catch {
-    return false;
-  }
-}
+    const formData = await req.formData();
+    const payload = Object.fromEntries(formData.entries());
 
-export const POST = withErrorHandler(async (req: Request) => {
-  const body = await req.text();
-  const signature = req.headers.get("x-signature") || "";
-  const secret = process.env.INSTAMOJO_WEBHOOK_SECRET;
+    // 1. Verify Instamojo MAC Signature
+    const macProvided = payload.mac as string;
+    const paymentId = payload.payment_id as string;
+    const status = payload.status as string;
+    const amount = parseFloat(payload.amount as string);
+    const userId = payload.buyer_name as string; // Standardized to hold userId
 
-  if (!secret) {
-    throw new AppError(
-      "Instamojo webhook secret missing",
-      500,
-      ErrorCode.CONFIG_ERROR,
-    );
-  }
+    delete payload.mac;
+    const sortedKeys = Object.keys(payload).sort();
+    const macData = sortedKeys.map((k) => payload[k]).join('|');
 
-  // Always return 200 on bad signature
-  if (!verifySignature(body, signature, secret)) {
-    return NextResponse.json({ received: true, ignored: "bad-signature" });
-  }
+    const expectedMac = crypto
+      .createHmac('sha1', process.env.INSTAMOJO_SALT!)
+      .update(macData)
+      .digest('hex');
 
-  let payload: InstamojoPayload;
-  try {
-    payload = JSON.parse(body);
-  } catch {
-    return NextResponse.json({ received: true });
-  }
-
-  const { payment_request_id, payment_status, amount } = payload;
-
-  if (payment_status === "Credit" && payment_request_id) {
-    const pendingTx = await prisma.transaction.findFirst({
-      where: { referenceId: payment_request_id, type: "TOPUP" },
-      orderBy: { createdAt: "desc" },
-    });
-
-    if (!pendingTx) {
-      console.warn(
-        "[Instamojo] No pending tx for " + payment_request_id,
-      );
-      return NextResponse.json({ received: true });
+    if (expectedMac !== macProvided) {
+      return NextResponse.json({ error: "Invalid MAC signature" }, { status: 401 });
     }
 
-    const creditRef = "instamojo:" + payment_request_id;
-    const alreadyCredited = await Ledger.getByReferenceId(creditRef);
-    if (alreadyCredited) {
-      return NextResponse.json({ received: true, ignored: "already-credited" });
-    }
+    if (status === "Credit") {
+      const alreadyCredited = await Ledger.getByReferenceId(paymentId);
+      if (alreadyCredited) {
+        return NextResponse.json({ success: true, message: "Already processed" });
+      }
 
-    const creditAmount = Number(amount || 0);
-
-    await Ledger.createTransaction({
-      walletId: pendingTx.walletId,
-      type: "TOPUP",
-      amount: creditAmount,
-      description: "Instamojo payment " + payment_request_id,
-      referenceId: creditRef,
-    });
-
-    // Notify the wallet owner
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: pendingTx.walletId },
-      select: { userId: true, balance: true },
-    });
-    if (wallet) {
-      await serverPublish("user:" + wallet.userId, "wallet:updated", {
-        balance: wallet.balance,
-        delta: creditAmount,
+      await Ledger.creditFunds({
+        userId,
+        amount,
+        description: "Instamojo Wallet Top-up",
+        referenceId: paymentId,
       });
     }
 
-    return NextResponse.json({ received: true, credited: creditAmount });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Instamojo Webhook Error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ received: true });
-});
-
+}

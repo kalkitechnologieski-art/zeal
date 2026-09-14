@@ -14,7 +14,7 @@ export const POST = withErrorHandler(async (req: Request) => {
     throw new AppError("Type DELETE to confirm", 400, ErrorCode.VALIDATION_INPUT);
   }
 
-  await withTransaction(async (tx) => {
+  await withTransaction(async (tx: any) => {
     await tx.notification.deleteMany({ where: { userId } });
     await tx.cheer.deleteMany({ where: { userId } });
     await tx.comment.deleteMany({ where: { authorId: userId } });

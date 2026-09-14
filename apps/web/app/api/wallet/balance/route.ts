@@ -1,25 +1,20 @@
-import { getUserId } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@zeal/database";
-import { withErrorHandler, AppError, HTTP_STATUS } from "@/lib/errors";
+import { createServerClientFromCookies, getUserId } from "@zeal/database";
+import { withErrorHandler, AppError, ErrorCode } from "@/lib/errors";
+
+export const dynamic = "force-dynamic";
 
 export const GET = withErrorHandler(async () => {
   const userId = await getUserId();
-  if (!userId) throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
+  if (!userId) throw new AppError("Unauthorized", 401, ErrorCode.AUTH_UNAUTHORIZED);
 
-  const wallet = await prisma.wallet.findUnique({
-    where: { userId },
-  });
-  if (!wallet) throw new AppError("Wallet not found", HTTP_STATUS.NOT_FOUND);
+  const supabase = await createServerClientFromCookies();
+  const { data, error } = await supabase
+    .from("Wallet")
+    .select("id, balance, escrow, pendingIn, pendingOut, blocked")
+    .eq("userId", userId)
+    .single();
 
-  return NextResponse.json({
-    wallet: {
-      id: wallet.id,
-      balance: wallet.balance,
-      escrow: wallet.escrow,
-      pendingIn: wallet.pendingIn,
-      pendingOut: wallet.pendingOut,
-      blocked: wallet.blocked,
-    },
-  });
+  if (error && error.code !== "PGRST116") throw new AppError(error.message, 500, ErrorCode.INTERNAL_SERVER);
+  return NextResponse.json({ wallet: data || { balance: 0 } });
 });

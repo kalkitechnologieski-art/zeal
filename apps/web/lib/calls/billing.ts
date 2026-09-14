@@ -1,7 +1,7 @@
 // Per-minute call billing via immutable Ledger
 import { prisma } from "@zeal/database";
 import { AppError, ErrorCode } from "@/lib/errors";
-import { Ledger } from "@/lib/wallet/ledger";
+import * as Ledger from "@/lib/wallet/ledger";
 
 export interface BillingTickResult {
   charged: boolean;

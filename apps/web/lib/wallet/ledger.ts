@@ -1,199 +1,61 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@zeal/database";
+import { createAdminClient } from '../supabase/admin';
 
-// P2034 = "Transaction failed due to a write conflict or a deadlock."
-// PostgreSQL raises this under concurrent writes. Prisma recommends
-// retrying with exponential backoff. See: https://pris.ly/d/transaction-conflict
-export async function withSerializableRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastError = err;
-      const isRetryable =
-        err instanceof Prisma.PrismaClientKnownRequestError &&
-        (err.code === "P2034" || err.code === "P2028");
-      if (!isRetryable || attempt === maxRetries) throw err;
-      const delay = Math.min(50 * Math.pow(2, attempt), 1000);
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
-  throw lastError;
+export async function holdInEscrow(userId: string, amount: number, bookingId: string, description: string) {
+  const supabase = createAdminClient();
+  // @ts-ignore - Ignore strict types pending next Supabase type generation
+  const { data, error } = await supabase.rpc('process_escrow_hold', {
+    p_user_id: userId, p_amount: amount, p_booking_id: bookingId, p_description: description
+  });
+  if (error) throw new Error(`Escrow hold failed: ${error.message}`);
+  return data;
 }
 
-import { prisma, withTransaction, TransactionType } from "@zeal/database";
-import { AppError, ErrorCode, InsufficientBalanceError } from "@/lib/errors";
-
-export interface LedgerEntry {
-  walletId: string;
-  type: TransactionType;
-  amount: number;
-  description: string;
-  referenceId?: string;
-  metadata?: Record<string, unknown>;
-  counterpartyId?: string;
-  category?: string;
+export async function releaseEscrow(bookingId: string, consultantId: string, earning: number, fee: number) {
+  const supabase = createAdminClient();
+  // @ts-ignore
+  const { data, error } = await supabase.rpc('process_escrow_release', {
+    p_booking_id: bookingId, p_consultant_id: consultantId, p_consultant_earning: earning, p_platform_fee: fee
+  });
+  if (error) throw new Error(`Escrow release failed: ${error.message}`);
+  return data;
 }
 
-export class Ledger {
-  private static readonly MAX_RETRIES = 3;
-
-  static async createTransaction(entry: LedgerEntry): Promise<{
-    id: string;
-    balance: number;
-    counterpartyTransactionId?: string;
-  }> {
-    if (entry.amount === 0) {
-      throw new AppError("Transaction amount must be non-zero", 400, ErrorCode.VALIDATION_INPUT);
-    }
-
-    return withTransaction(
-      async (tx) => {
-        const wallet = await tx.wallet.findUnique({
-          where: { id: entry.walletId },
-          select: { id: true, balance: true, userId: true },
-        });
-        if (!wallet) throw new AppError("Wallet not found", 404, ErrorCode.WALLET_NOT_FOUND);
-
-        const newBalance = wallet.balance + entry.amount;
-        if (entry.amount < 0 && newBalance < 0) {
-          throw new InsufficientBalanceError(Math.abs(entry.amount), wallet.balance);
-        }
-
-        const transaction = await tx.transaction.create({
-          data: {
-            walletId: entry.walletId,
-            type: entry.type,
-            amount: entry.amount,
-            balance: newBalance,
-            description: entry.description,
-            referenceId: entry.referenceId,
-            metadata: {
-              ...entry.metadata,
-              counterpartyId: entry.counterpartyId,
-              category: entry.category,
-              ledgerVersion: 2,
-            },
-          },
-        });
-
-        await tx.wallet.update({
-          where: { id: entry.walletId },
-          data: { balance: newBalance },
-        });
-
-        let counterpartyTransactionId: string | undefined;
-        if (entry.counterpartyId && entry.amount !== 0) {
-          const counterpartyWallet = await tx.wallet.findUnique({
-            where: { id: entry.counterpartyId },
-          });
-          if (counterpartyWallet) {
-            const counterpartyBalance = counterpartyWallet.balance - entry.amount;
-            const ct = await tx.transaction.create({
-              data: {
-                walletId: entry.counterpartyId,
-                type: entry.type === "PAYMENT" ? "COMMISSION" : 
-                      entry.type === "TOPUP" ? "PAYMENT" : "COMMISSION",
-                amount: -entry.amount,
-                balance: counterpartyBalance,
-                description: `Counterparty: ${entry.description}`,
-                referenceId: entry.referenceId,
-                metadata: { originalTransactionId: transaction.id, ledgerVersion: 2 },
-              },
-            });
-            await tx.wallet.update({
-              where: { id: entry.counterpartyId },
-              data: { balance: counterpartyBalance },
-            });
-            counterpartyTransactionId = ct.id;
-          }
-        }
-
-        return {
-          id: transaction.id,
-          balance: newBalance,
-          counterpartyTransactionId,
-        };
-      },
-      { maxRetries: Ledger.MAX_RETRIES, isolationLevel: "Serializable" },
-    );
-  }
-
-  static async getBalance(walletId: string): Promise<number> {
-    const wallet = await prisma.wallet.findUnique({
-      where: { id: walletId },
-      select: { balance: true },
-    });
-    if (!wallet) throw new AppError("Wallet not found", 404, ErrorCode.WALLET_NOT_FOUND);
-    return wallet.balance;
-  }
-
-  static async getTransactions(
-    walletId: string,
-    options?: {
-      limit?: number;
-      offset?: number;
-      type?: TransactionType;
-      fromDate?: Date;
-      toDate?: Date;
-      referenceId?: string;
-    },
-  ) {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-    const where: any = { walletId };
-    if (options?.type) where.type = options.type;
-    if (options?.fromDate) where.createdAt = { gte: options.fromDate };
-    if (options?.toDate) where.createdAt = { ...where.createdAt, lte: options.toDate };
-    if (options?.referenceId) where.referenceId = options.referenceId;
-
-    const [items, total] = await Promise.all([
-      prisma.transaction.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      prisma.transaction.count({ where }),
-    ]);
-
-    return {
-      items,
-      total,
-      pagination: { limit, offset, hasMore: offset + limit < total },
-    };
-  }
-
-  static async getByReferenceId(referenceId: string) {
-    return prisma.transaction.findFirst({
-      where: { referenceId },
-      orderBy: { createdAt: "desc" },
-    });
-  }
-
-  static async reconcile(walletId: string) {
-    const wallet = await prisma.wallet.findUnique({ where: { id: walletId } });
-    if (!wallet) throw new AppError("Wallet not found", 404, ErrorCode.WALLET_NOT_FOUND);
-
-    const transactions = await prisma.transaction.findMany({
-      where: { walletId },
-      orderBy: { createdAt: "asc" },
-    });
-
-    let expectedBalance = 0;
-    for (const tx of transactions) expectedBalance += tx.amount;
-
-    return {
-      expectedBalance,
-      actualBalance: wallet.balance,
-      difference: wallet.balance - expectedBalance,
-      transactions,
-    };
-  }
+export async function deductPerMinute(userId: string, consultantId: string, amount: number, sessionId: string) {
+  const supabase = createAdminClient();
+  // @ts-ignore
+  const { data, error } = await supabase.rpc('process_per_minute_deduction', {
+    p_user_id: userId, p_consultant_id: consultantId, p_amount: amount, p_session_id: sessionId
+  });
+  if (error) throw new Error(`Per-minute billing failed: ${error.message}`);
+  return data;
 }
 
-// BATCH1_APPLIED
+export async function creditFunds(params: any) {
+  const supabase = createAdminClient();
+  // @ts-ignore
+  const { data, error } = await supabase.rpc('process_wallet_topup', {
+    p_user_id: params.userId, p_amount: params.amount, p_description: params.description, p_reference_id: params.referenceId || null
+  });
+  if (error) throw new Error(`Wallet credit failed: ${error.message}`);
+  return data;
+}
+
+export async function getWalletBalance(userId: string): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from('Wallet').select('balance').eq('userId', userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as any)?.balance ?? 0;
+}
+
+export async function getByReferenceId(referenceId: string) {
+  const supabase = createAdminClient();
+  const { data } = await supabase.from('Transaction').select('*').eq('referenceId', referenceId).maybeSingle();
+  return data;
+}
+
+export async function createTransaction(params: any) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from('Transaction').insert(params).select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}

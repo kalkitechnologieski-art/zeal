@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@zeal/database";
 
 // P2034 = "Transaction failed due to a write conflict or a deadlock."
 // PostgreSQL raises this under concurrent writes. Prisma recommends

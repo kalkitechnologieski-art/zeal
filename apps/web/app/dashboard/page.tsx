@@ -51,9 +51,13 @@ export default function DashboardPage() {
         {/* DASHBOARD HEADER & REAL MONEY WALLET */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 mb-4 transition-colors">
+            {/* FIX: Hard Browser Navigation replacing Next.js Link */}
+            <button 
+              onClick={() => window.location.href = "/"} 
+              className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 mb-4 transition-colors"
+            >
               <Home size={16} /> Return to Cosmos
-            </Link>
+            </button>
             <h1 className="text-4xl sm:text-5xl font-medium text-slate-900 dark:text-white tracking-tight">
               Welcome back.
             </h1>
@@ -78,7 +82,6 @@ export default function DashboardPage() {
               </div>
             </div>
             
-            {/* Add Funds Button Placeholder */}
             <button className="w-full sm:w-auto mt-4 sm:mt-0 flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-medium text-sm hover:bg-slate-800 dark:hover:bg-slate-200 transition-all">
               <Plus size={16} /> Add Funds
             </button>

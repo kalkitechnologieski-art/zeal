@@ -1,87 +1,57 @@
 "use client";
-
 import { useState } from "react";
-import { useCompletion } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { Hash, Calendar, User, ArrowRight, Sparkles } from "lucide-react";
+import { Hash, Sparkles, ArrowRight } from "lucide-react";
 
 export default function NumerologyPage() {
   const [fullName, setFullName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [dob, setDob] = useState("");
+  const [analysis, setAnalysis] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const { complete, completion, isLoading } = useCompletion({
-    api: "/api/ai/numerology",
-  });
-
-  const handleGenerate = () => {
-    if (!fullName || !birthDate) return;
-    complete("", { body: { fullName, birthDate } });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ai/numerology", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, dob })
+      });
+      const data = await res.json();
+      if (data.success) setAnalysis(data.analysis);
+    } catch (e) { setAnalysis("Computation failed."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-white selection:bg-amber-100">
-      <div className="max-w-2xl mx-auto px-6 py-24">
-        
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-4">Sacred Numerology.</h1>
-          <p className="text-lg text-gray-500 font-medium">Decode the hidden numbers ruling your destiny and core vibrations.</p>
-        </motion.div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <Hash className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h1 className="text-4xl font-medium mb-2">Destiny Numerology Frequency</h1>
+          <p className="text-slate-400">Calculate life path and karmic frequency cycles.</p>
+        </div>
 
-        {!completion && !isLoading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <div className="relative flex items-center">
-              <User className="absolute left-4 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Full Legal Name"
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-900"
-              />
+        {!analysis ? (
+          <form onSubmit={handleSubmit} className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl space-y-6">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Full Name</label>
+              <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl outline-none text-white" />
             </div>
-
-            <div className="relative flex items-center">
-              <Calendar className="absolute left-4 w-5 h-5 text-gray-400" />
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none font-medium text-gray-900"
-              />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Birth Date</label>
+              <input type="date" required value={dob} onChange={e => setDob(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl outline-none text-white" />
             </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={!fullName || !birthDate}
-              className="w-full py-4 mt-8 bg-amber-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-amber-700 disabled:opacity-50 transition-all cursor-pointer shadow-lg shadow-amber-100"
-            >
-              <Hash className="w-5 h-5" /> Calculate Numbers
+            <button type="submit" disabled={loading} className="w-full py-4 bg-amber-500 text-slate-950 rounded-2xl font-bold hover:bg-amber-400 transition-all">
+              {loading ? "Calculating..." : "Compute Numerology Profile"}
             </button>
-          </motion.div>
-        )}
-
-        {(isLoading || completion) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-lg prose-amber mx-auto">
-            {isLoading && !completion && (
-              <div className="flex items-center gap-3 text-amber-600 font-medium animate-pulse mb-6">
-                <Sparkles className="w-5 h-5" /> Reducing digits and evaluating matrix vibrations...
-              </div>
-            )}
-            
-            <div className="text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
-              {completion}
-            </div>
-
-            {!isLoading && completion && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-12 p-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border border-amber-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Consult a Numerologist</h3>
-                <p className="text-gray-600 mb-6">Discover name-correction spelling adjustments for peak success.</p>
-                <button className="w-full py-3 bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-amber-700 transition-all cursor-pointer">
-                  Speak with Expert <ArrowRight className="w-4 h-4" />
-                </button>
-              </motion.div>
-            )}
-          </motion.div>
+          </form>
+        ) : (
+          <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 sm:p-12 rounded-[2.5rem] shadow-2xl space-y-6">
+            <h3 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="text-amber-500"/> {fullName}'s Numerology Matrix</h3>
+            <p className="text-slate-300 font-light leading-relaxed whitespace-pre-line">{analysis}</p>
+            <button onClick={() => setAnalysis("")} className="px-6 py-3 bg-slate-800 rounded-xl text-sm font-medium">Calculate Another</button>
+          </div>
         )}
       </div>
     </div>

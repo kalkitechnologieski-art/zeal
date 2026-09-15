@@ -1,84 +1,54 @@
 "use client";
-
 import { useState } from "react";
-import { useCompletion } from "@ai-sdk/react";
-import { LocationAutocomplete } from "@/components/ui/LocationAutocomplete";
 import { motion } from "framer-motion";
-import { Sparkles, Calendar, ArrowRight } from "lucide-react";
+import { Star, Sparkles, ArrowRight } from "lucide-react";
 
-export default function PremiumHoroscope() {
-  const [location, setLocation] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  
-  const { complete, completion, isLoading } = useCompletion({
-    api: "/api/ai/horoscope",
-  });
+const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
 
-  const handleGenerate = () => {
-    if (!location || !birthDate) return;
-    complete("", { body: { location, birthDate } });
+export default function HoroscopePage() {
+  const [selectedSign, setSelectedSign] = useState("Aries");
+  const [reading, setReading] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const fetchHoroscope = async (sign: string) => {
+    setSelectedSign(sign);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ai/horoscope", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sign })
+      });
+      const data = await res.json();
+      if (data.success) setReading(data.reading);
+    } catch (e) {
+      setReading("Unable to fetch transit telemetry.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white selection:bg-indigo-100">
-      <div className="max-w-2xl mx-auto px-6 py-24">
-        
-        {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-4">Cosmic Alignment.</h1>
-          <p className="text-lg text-gray-500 font-medium">Precision insights based on your exact spacetime.</p>
-        </motion.div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 font-medium text-xs uppercase tracking-widest mb-6">
+          <Star size={14} /> Ephemeris Transit Forecast
+        </div>
+        <h1 className="text-4xl sm:text-6xl font-medium tracking-tight mb-4">Daily Planetary Horoscope</h1>
+        <p className="text-slate-600 dark:text-slate-400 font-light text-lg mb-12">Select your zodiac sign for real-time Groq AI transits.</p>
 
-        {/* Input Form */}
-        {!completion && !isLoading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-            <div className="relative flex items-center">
-              <Calendar className="absolute left-4 w-5 h-5 text-gray-400" />
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-gray-900"
-              />
-            </div>
-            
-            <LocationAutocomplete onSelect={setLocation} />
-
-            <button
-              onClick={handleGenerate}
-              disabled={!location || !birthDate}
-              className="w-full py-4 mt-8 bg-gray-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 disabled:opacity-50 transition-all cursor-pointer"
-            >
-              <Sparkles className="w-5 h-5" /> Calculate Chart
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-12">
+          {SIGNS.map(sign => (
+            <button key={sign} onClick={() => fetchHoroscope(sign)} className={`py-4 rounded-2xl font-bold transition-all border ${selectedSign === sign ? "bg-blue-600 text-white border-blue-500 shadow-lg" : "bg-white/80 dark:bg-slate-900/60 border-slate-200 dark:border-white/10 hover:border-blue-400"}`}>
+              {sign}
             </button>
-          </motion.div>
-        )}
+          ))}
+        </div>
 
-        {/* Output Stream */}
-        {(isLoading || completion) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-lg prose-indigo mx-auto">
-            {isLoading && !completion && (
-              <div className="flex items-center gap-3 text-indigo-600 font-medium animate-pulse mb-6">
-                <Sparkles className="w-5 h-5" /> Synthesizing planetary data...
-              </div>
-            )}
-            
-            <div className="text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
-              {completion}
-            </div>
-
-            {/* The Upsell */}
-            {!isLoading && completion && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-12 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl border border-indigo-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Need deeper clarity?</h3>
-                <p className="text-gray-600 mb-6">Your cosmic snapshot only scratches the surface.</p>
-                <button className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all cursor-pointer">
-                  Consult a Live Astrologer <ArrowRight className="w-4 h-4" />
-                </button>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
+        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 sm:p-12 text-left shadow-2xl">
+          <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><Sparkles className="text-blue-500"/> {selectedSign} Forecast</h3>
+          {loading ? <p className="text-slate-400 animate-pulse">Computing planetary degrees...</p> : <p className="text-slate-300 leading-relaxed font-light text-base">{reading || "Click a sign above to load forecast."}</p>}
+        </div>
       </div>
     </div>
   );

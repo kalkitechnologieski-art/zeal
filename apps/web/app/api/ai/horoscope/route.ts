@@ -1,18 +1,21 @@
-import { generateFaultTolerantStream } from "@/lib/ai/router";
-import { aiRateLimiter } from "@/lib/rate-limit";
-
-export async function POST(req: Request) {
+import { NextResponse } from "next/server";
+export async function POST(request: Request) {
   try {
-    const { success } = await aiRateLimiter.limit(req.headers.get("x-forwarded-for") || "127.0.0.1");
-    if (!success) return new Response("Rate limit exceeded.", { status: 429 });
-
-    const { location, birthDate } = await req.json();
-
-    const systemPrompt = `You are an elite, modern Vedic Astrologer. Speak with the minimal, poetic, and direct tone of Co-Star. Avoid cliches. Format with clean paragraphs. Address the user directly based on their birth location: ${location} and date: ${birthDate}.`;
-    const userPrompt = "Generate my daily cosmic snapshot. Focus on Career, Relationships, and a core piece of daily advice.";
-
-    return await generateFaultTolerantStream(systemPrompt, userPrompt);
-  } catch (error: any) {
-    return new Response(error.message, { status: 500 });
-  }
+    const { sign } = await request.json();
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      return NextResponse.json({ success: true, reading: `Horoscope for ${sign}: Today brings powerful clarity and cosmic alignment in career and relationship sectors.` });
+    }
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "system", content: "You are an expert astrologer providing daily horoscopes." }, { role: "user", content: `Provide a detailed daily astrological horoscope for ${sign}.` }],
+        temperature: 0.7, max_tokens: 800
+      })
+    });
+    const data = await res.json();
+    return NextResponse.json({ success: true, reading: data.choices?.[0]?.message?.content || "Horoscope computed." });
+  } catch (err: any) { return NextResponse.json({ success: false, error: err.message }, { status: 500 }); }
 }

@@ -1,23 +1,11 @@
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { SupabaseAuthProvider } from "@/components/providers/SupabaseAuthProvider";
-import { QueryProvider } from "@/lib/query/provider";
-import { LoggingProvider } from "@/components/providers/LoggingProvider";
-import { TopBar } from "@/components/layout/TopBar";
-import { BottomNav } from "@/components/layout/BottomNav";
-import { Toaster } from "@/components/ui/toaster";
-import { IncomingCallOverlay } from "@/components/call/IncomingCallOverlay";
 import "./globals.css";
+import { Navbar } from "@/components/layout/Navbar";
+import { BottomBar } from "@/components/layout/BottomBar";
 
 export const metadata: Metadata = {
-  title: "Zeal – Faith & Wellness Platform",
-  description: "Connect with trusted healers, astrologers, and wellness experts.",
-};
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
+  title: "Zeal — Cinematic Metaphysics & AI Intelligence",
+  description: "Enterprise-grade Vedic astrology and AI neural consultation platform.",
 };
 
 export default function RootLayout({
@@ -26,31 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-background text-foreground antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          themes={["light", "dark"]}
-          disableTransitionOnChange
-        >
-          <QueryProvider>
-            <SupabaseAuthProvider>
-              <LoggingProvider>
-                <div className="flex flex-col min-h-screen min-h-dvh">
-                  <TopBar />
-                  <main className="flex-1 overflow-y-auto pt-16 pb-16">
-                    {children}
-                  </main>
-                  <BottomNav />
-                </div>
-                <IncomingCallOverlay />
-              </LoggingProvider>
-            </SupabaseAuthProvider>
-          </QueryProvider>
-          <Toaster />
-        </ThemeProvider>
+    <html lang="en" className="dark">
+      <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased selection:bg-purple-500/30 pb-20 md:pb-0">
+        <Navbar />
+        <main>{children}</main>
+        <BottomBar />
       </body>
     </html>
   );

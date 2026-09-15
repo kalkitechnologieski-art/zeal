@@ -27,17 +27,27 @@ export default async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Explicitly list ONLY the routes that require authentication
-  const protectedPrefixes = ["/profile", "/chat", "/wallet", "/dashboard", "/admin", "/super-admin"];
+  // ONLY these routes require authentication
+  const protectedPrefixes = [
+    "/profile", 
+    "/chat", 
+    "/wallet", 
+    "/dashboard", 
+    "/admin", 
+    "/super-admin"
+  ];
+  
   const isProtected = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
-  if (!user && isProtected) {
+  // If a protected route is requested and user is not authenticated, redirect to /login
+  if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", path);
     return NextResponse.redirect(loginUrl);
   }
 
+  // All other pages (/, /explore, /zeal, /services, /ai-consultants) render freely without auth
   return supabaseResponse;
 }
 

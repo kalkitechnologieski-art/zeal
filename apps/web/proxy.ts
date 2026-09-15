@@ -1,12 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Using 'export default' guarantees Next.js identifies the proxy entry point
 export default async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   });
 
   const supabase = createServerClient(
@@ -14,14 +13,10 @@ export default async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
+        getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -32,15 +27,14 @@ export default async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Define routes that REQUIRE the user to be logged in
-  const protectedRoutes = ["/profile", "/wallet", "/dashboard", "/bookings", "/settings"];
-  const isProtectedRoute = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
+  // Explicitly list ONLY the routes that require authentication
+  const protectedPrefixes = ["/profile", "/chat", "/wallet", "/dashboard", "/admin", "/super-admin"];
+  const isProtected = protectedPrefixes.some((prefix) => path.startsWith(prefix));
 
-  // If the user is NOT logged in and tries to access a protected route, send to your new /login
-  if (!user && isProtectedRoute) {
+  if (!user && isProtected) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", request.nextUrl.pathname); // Remember where they wanted to go
+    loginUrl.searchParams.set("next", path);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -49,7 +43,6 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Apply proxy to everything EXCEPT static files and images
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

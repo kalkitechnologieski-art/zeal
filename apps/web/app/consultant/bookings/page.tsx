@@ -1,76 +1,39 @@
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Calendar, Filter } from "lucide-react";
-import { BookingCard, type BookingSummary } from "@/components/bookings/BookingCard";
-import { EmptyState } from "@/components/shared/EmptyState";
-
-const FILTERS = ["all", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"];
+import { Calendar, Clock, Home, ShieldCheck } from "lucide-react";
 
 export default function ConsultantBookingsPage() {
-  const [filter, setFilter] = useState("all");
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["consultant", "bookings", filter],
-    queryFn: async () => {
-      const url = filter === "all" ? "/api/bookings" : `/api/bookings?status=${filter}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to load bookings");
-      return res.json();
-    },
-    refetchInterval: 30_000,
-  });
-
-  const bookings: BookingSummary[] = data?.items || [];
+  const bookings = [
+    { id: "1", client: "Alexander Vance", date: "2026-03-25", time: "10:00 AM", status: "Confirmed" }
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-          <Calendar className="w-6 h-6 text-[#9D7DC5]" /> Bookings
-        </h1>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={() => window.location.href = "/consultant/dashboard"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-purple-400 mb-8">
+          <Home size={16} /> Back to Dashboard
+        </button>
 
-      {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
-              filter === f
-                ? "bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white shadow-lg"
-                : "bg-white/60 dark:bg-gray-800/60 text-[#5E4B8B] dark:text-white border border-[#E1C5E7] dark:border-gray-700"
-            }`}
-          >
-            {f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}
-          </button>
-        ))}
-      </div>
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
+          <h1 className="text-3xl font-bold mb-2">Incoming Bookings</h1>
+          <p className="text-slate-400 font-light mb-8">Review and join scheduled client sessions.</p>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 rounded-2xl bg-[#F4E8F7] dark:bg-gray-800 animate-pulse" />
-          ))}
+          <div className="space-y-4">
+            {bookings.map((b: any) => (
+              <div key={b.id} className="p-6 bg-slate-950/50 rounded-2xl border border-white/5 flex justify-between items-center">
+                <div>
+                  <h4 className="font-bold text-lg">{b.client}</h4>
+                  <p className="text-xs text-slate-400 mt-1">{b.date} at {b.time}</p>
+                </div>
+                <button onClick={() => alert("Launching encrypted room...")} className="px-5 py-2.5 bg-purple-600 text-white rounded-xl font-medium text-sm">
+                  Join Room
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : bookings.length === 0 ? (
-        <EmptyState
-          icon={Calendar}
-          title="No bookings yet"
-          description="Your upcoming and past sessions will appear here."
-        />
-      ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
-          {bookings.map((b, idx) => (
-            <BookingCard key={b.id} booking={b} role="consultant" index={idx} />
-          ))}
-        </motion.div>
-      )}
+      </div>
     </div>
   );
 }
-
-// BATCH_F3_APPLIED

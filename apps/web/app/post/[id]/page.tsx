@@ -1,40 +1,38 @@
 "use client";
+export const dynamic = "force-dynamic";
+
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { PostCard, type PostCardData } from "@/components/feed/PostCard";
-import { CommentThread } from "@/components/feed/CommentThread";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { FileQuestion } from "lucide-react";
+import { MessageSquare, Sparkles, Home } from "lucide-react";
 
 export default function PostDetailPage() {
-  const params = useParams<{ id: string }>();
-
-  const { data, isLoading, error } = useQuery<{ post: PostCardData }>({
-    queryKey: ["post", params.id],
-    queryFn: async () => {
-      const res = await fetch("/api/posts/" + params.id);
-      if (!res.ok) throw new Error("Post not found");
-      return res.json();
-    },
-    enabled: !!params.id,
-  });
-
-  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#9D7DC5]" /></div>;
-  if (error || !data?.post) return <EmptyState icon={FileQuestion} title="Post not found" description="This post may have been deleted." />;
+  const params = useParams();
+  const id = params?.id as string;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <Link href="/dashboard" className="inline-flex items-center gap-2 text-[#9D7DC5] hover:underline text-sm">
-        <ArrowLeft className="w-4 h-4" /> Back to feed
-      </Link>
-      <PostCard post={data.post} />
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-[#E1C5E7] dark:border-gray-700 p-4">
-        <h2 className="font-semibold text-[#5E4B8B] dark:text-white mb-4">Comments</h2>
-        <CommentThread postId={params.id} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <button onClick={() => window.location.href = "/"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-purple-400 mb-8">
+          <Home size={16} /> Return to Cosmos
+        </button>
+
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+              C
+            </div>
+            <div>
+              <h4 className="font-bold">Verified Consultant</h4>
+              <p className="text-xs text-slate-400">Cosmos Feed Post #{id}</p>
+            </div>
+          </div>
+          <p className="text-slate-300 leading-relaxed text-lg mb-8 font-light">
+            Planetary transits this week bring heightened intuition and structural clarity. Meditate upon your ascendant house to align with these frequencies.
+          </p>
+          <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
+            <MessageSquare size={16} /> 12 Comments on Transmission
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

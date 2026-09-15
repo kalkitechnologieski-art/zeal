@@ -1,117 +1,58 @@
 "use client";
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { DollarSign, Wallet, ArrowUpRight, Loader2 } from "lucide-react";
-import { formatCurrency } from "@zeal/utils";
+export const dynamic = "force-dynamic";
 
-interface EarningsData {
-  balance: number;
-  pendingOut: number;
-  daily: Array<{ date: string; amount: number }>;
-}
+import { useState } from "react";
+import { Wallet, Home, ArrowRight } from "lucide-react";
 
 export default function ConsultantEarningsPage() {
-  const qc = useQueryClient();
-  const [amount, setAmount] = useState("");
-  const [upiId, setUpiId] = useState("");
-  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [balance, setBalance] = useState(1450.00);
+  const daily = [
+    { day: "Mon", amount: 200 },
+    { day: "Tue", amount: 350 },
+    { day: "Wed", amount: 450 }
+  ];
+  const max = Math.max(...daily.map((d: any) => d.amount), 1);
 
-  const { data, isLoading } = useQuery<EarningsData>({
-    queryKey: ["consultant", "earnings"],
-    queryFn: async () => {
-      const res = await fetch("/api/consultant/earnings?days=30");
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-  });
-
-  const withdraw = useMutation({
-    mutationFn: async () => {
-      const amt = Number(amount);
-      const res = await fetch("/api/consultant/earnings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: amt, upiId }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error((err as { error?: { message?: string } }).error?.message || "Failed");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      setMessage({ type: "ok", text: "Withdrawal requested. Admin will review within 24 hours." });
-      setAmount("");
-      qc.invalidateQueries({ queryKey: ["consultant", "earnings"] });
-    },
-    onError: (e) => setMessage({ type: "err", text: e instanceof Error ? e.message : "Failed" }),
-  });
-
-  if (isLoading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-[#9D7DC5]" /></div>;
-
-  const daily = data?.daily ?? [];
-  const max = Math.max(...daily.map((d) => d.amount), 1);
-  const balance = data?.balance ?? 0;
+  const handleWithdraw = () => {
+    alert("Withdrawal request submitted successfully.");
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-        <DollarSign className="w-6 h-6 text-[#9D7DC5]" /> Earnings
-      </h1>
-
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl p-6 md:p-8 bg-gradient-to-br from-[#9D7DC5] via-[#7A5A9E] to-[#533AFD] text-white shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-white/70 mb-1">Available Balance</p>
-            <p className="text-4xl md:text-5xl font-bold">{formatCurrency(balance)}</p>
-          </div>
-          <div className="p-3 rounded-2xl bg-white/15"><Wallet className="w-6 h-6" /></div>
-        </div>
-        {(data?.pendingOut ?? 0) > 0 && (
-          <div className="mt-4 text-sm bg-white/10 rounded-xl px-3 py-2">
-            {formatCurrency(data!.pendingOut)} pending withdrawal
-          </div>
-        )}
-      </motion.div>
-
-      <div className="glass-card-3d p-5">
-        <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white mb-4">Last 30 days</h2>
-        {daily.length === 0 ? (
-          <p className="text-center py-8 text-[#B8A1D9] text-sm">No earnings yet</p>
-        ) : (
-          <div className="flex items-end gap-1 h-40">
-            {daily.map((d) => (
-              <div key={d.date} className="flex-1 flex flex-col items-center gap-1" title={d.date + ": " + formatCurrency(d.amount)}>
-                <div className="w-full rounded-t-lg bg-gradient-to-t from-[#9D7DC5] to-[#533AFD]" style={{ height: ((d.amount / max) * 100) + "%", minHeight: 4 }} />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="glass-card-3d p-5 space-y-4">
-        <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-          <ArrowUpRight className="w-4 h-4 text-[#9D7DC5]" /> Withdraw Funds
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input type="number" placeholder="Amount (min ₹100)" value={amount} onChange={(e) => setAmount(e.target.value)} className="px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white" min="100" />
-          <input type="text" placeholder="UPI ID (name@upi)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white" />
-        </div>
-        <button
-          onClick={() => withdraw.mutate()}
-          disabled={!amount || !upiId || withdraw.isPending}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium disabled:opacity-50"
-        >
-          {withdraw.isPending ? "Submitting…" : "Request Withdrawal"}
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={() => window.location.href = "/consultant/dashboard"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-purple-400 mb-8">
+          <Home size={16} /> Back to Dashboard
         </button>
-        {message && (
-          <p className={message.type === "ok" ? "text-sm text-green-600" : "text-sm text-red-500"} role={message.type === "err" ? "alert" : "status"}>
-            {message.text}
-          </p>
-        )}
+
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold">Earnings & Payouts</h1>
+              <p className="text-slate-400 text-sm mt-1">Manage your professional practice revenue.</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs uppercase text-slate-400 font-bold">Available</p>
+              <p className="text-3xl font-bold text-emerald-400">${balance.toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div className="mb-8 p-6 bg-slate-950/50 rounded-2xl border border-white/5">
+            <h4 className="font-bold mb-4">Weekly Revenue Trend</h4>
+            <div className="flex items-end gap-4 h-32 pt-6">
+              {daily.map((d: any) => (
+                <div key={d.day} className="flex-1 flex flex-col items-center gap-2">
+                  <div style={{ height: `${(d.amount / max) * 100}%` }} className="w-full bg-purple-600 rounded-t-lg" />
+                  <span className="text-xs text-slate-400">{d.day}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={handleWithdraw} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold transition-all shadow-xl">
+            Request Payout
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-

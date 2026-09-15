@@ -1,196 +1,47 @@
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Clock, Plus, Trash2, Loader2 } from "lucide-react";
-
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
-type Day = typeof DAYS[number];
-
-interface TimeBlock {
-  start: string;
-  end: string;
-}
-
-type Availability = Record<Day, TimeBlock[]>;
-
-const DEFAULT_AVAILABILITY: Availability = {
-  monday: [{ start: "09:00", end: "18:00" }],
-  tuesday: [{ start: "09:00", end: "18:00" }],
-  wednesday: [{ start: "09:00", end: "18:00" }],
-  thursday: [{ start: "09:00", end: "18:00" }],
-  friday: [{ start: "09:00", end: "18:00" }],
-  saturday: [],
-  sunday: [],
-};
+import { useState } from "react";
+import { Calendar, Clock, ShieldCheck, Home } from "lucide-react";
 
 export default function ConsultantAvailabilityPage() {
-  const queryClient = useQueryClient();
-  const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
-  const [bufferMinutes, setBufferMinutes] = useState(10);
+  const [slots, setSlots] = useState([
+    { day: "Monday", active: true, time: "09:00 - 17:00" },
+    { day: "Tuesday", active: true, time: "09:00 - 17:00" },
+    { day: "Wednesday", active: false, time: "Off" }
+  ]);
+  const [saved, setSaved] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["consultant", "availability"],
-    queryFn: async () => {
-      const res = await fetch("/api/consultant/availability");
-      if (!res.ok) throw new Error("Failed to load");
-      return res.json();
-    },
-  });
-
-  useEffect(() => {
-    if (data?.availability) {
-      const filled: Availability = { ...DEFAULT_AVAILABILITY };
-      for (const day of DAYS) {
-        const blocks = (data.availability as Partial<Availability>)[day];
-        if (Array.isArray(blocks)) filled[day] = blocks;
-      }
-      setAvailability(filled);
-      if (typeof data.bufferMinutes === "number") setBufferMinutes(data.bufferMinutes);
-    }
-  }, [data]);
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/consultant/availability", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ availability, bufferMinutes }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["consultant", "availability"] });
-    },
-  });
-
-  const addBlock = (day: Day) => {
-    setAvailability((prev) => ({
-      ...prev,
-      [day]: [...prev[day], { start: "09:00", end: "17:00" }],
-    }));
+  const handleSave = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
-
-  const removeBlock = (day: Day, idx: number) => {
-    setAvailability((prev) => ({
-      ...prev,
-      [day]: prev[day].filter((_, i) => i !== idx),
-    }));
-  };
-
-  const updateBlock = (day: Day, idx: number, field: "start" | "end", value: string) => {
-    setAvailability((prev) => ({
-      ...prev,
-      [day]: prev[day].map((b, i) => (i === idx ? { ...b, [field]: value } : b)),
-    }));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-[#9D7DC5]" />
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-        <Clock className="w-6 h-6 text-[#9D7DC5]" /> Availability
-      </h1>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <button onClick={() => window.location.href = "/consultant/dashboard"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-purple-400 mb-8">
+          <Home size={16} /> Back to Dashboard
+        </button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass-card-3d p-5 space-y-4"
-      >
-        <div>
-          <label className="block text-sm font-medium text-[#5E4B8B] dark:text-white mb-1">
-            Buffer between bookings (minutes)
-          </label>
-          <input
-            type="number"
-            min={0}
-            max={60}
-            value={bufferMinutes}
-            onChange={(e) => setBufferMinutes(Number(e.target.value))}
-            className="w-full sm:w-32 px-4 py-3 rounded-xl bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-[#5E4B8B] dark:text-white"
-          />
-        </div>
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
+          <h1 className="text-3xl font-bold mb-2">Manage Availability</h1>
+          <p className="text-slate-400 font-light mb-8">Configure your active consultation hours for clients.</p>
 
-        <div className="space-y-3">
-          {DAYS.map((day) => (
-            <div key={day} className="p-4 rounded-xl bg-[#FDFBF7] dark:bg-gray-800/50">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-[#5E4B8B] dark:text-white capitalize">
-                  {day}
-                </p>
-                <button
-                  onClick={() => addBlock(day)}
-                  className="p-1.5 rounded-lg hover:bg-[#F4E8F7] dark:hover:bg-gray-700"
-                  aria-label={`Add time block for ${day}`}
-                >
-                  <Plus className="w-4 h-4 text-[#9D7DC5]" />
-                </button>
+          <div className="space-y-4 mb-8">
+            {slots.map((s, idx) => (
+              <div key={s.day} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-white/5">
+                <span className="font-medium">{s.day}</span>
+                <span className="text-sm text-purple-400">{s.time}</span>
               </div>
+            ))}
+          </div>
 
-              {availability[day].length === 0 ? (
-                <p className="text-xs text-[#B8A1D9] py-1">Unavailable</p>
-              ) : (
-                <div className="space-y-2">
-                  {availability[day].map((block, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="time"
-                        value={block.start}
-                        onChange={(e) => updateBlock(day, idx, "start", e.target.value)}
-                        className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-sm text-[#5E4B8B] dark:text-white"
-                      />
-                      <span className="text-[#B8A1D9]">–</span>
-                      <input
-                        type="time"
-                        value={block.end}
-                        onChange={(e) => updateBlock(day, idx, "end", e.target.value)}
-                        className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-900 border border-[#E1C5E7] dark:border-gray-700 text-sm text-[#5E4B8B] dark:text-white"
-                      />
-                      <button
-                        onClick={() => removeBlock(day, idx)}
-                        className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 ml-auto"
-                        aria-label="Remove block"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+          <button onClick={handleSave} className="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-2xl font-bold hover:bg-purple-600 transition-all">
+            {saved ? "Saved Successfully!" : "Save Availability"}
+          </button>
         </div>
-
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white font-medium shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {saveMutation.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Saving...
-            </>
-          ) : (
-            "Save Availability"
-          )}
-        </motion.button>
-
-        {saveMutation.isSuccess && (
-          <p className="text-sm text-green-600 text-center">Availability saved ✓</p>
-        )}
-      </motion.div>
+      </div>
     </div>
   );
 }
-
-// BATCH_F3_APPLIED

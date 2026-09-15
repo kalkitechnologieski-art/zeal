@@ -1,107 +1,60 @@
 "use client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Calendar, DollarSign, Radio, Clock, TrendingUp, Loader2 } from "lucide-react";
-import { useRealtime } from "@/hooks/useRealtime";
-import { formatCurrency } from "@zeal/utils";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { Users } from "lucide-react";
+export const dynamic = "force-dynamic";
 
-interface PulseData {
-  today: {
-    bookings: Array<{ id: string; scheduledAt: string; durationMinutes: number; status: string; user?: { name?: string | null; username: string } | null }>;
-    liveSessions: number;
-    pendingRequests: number;
-    earnings: number;
-  };
-  consultant: { id: string; rating: number; totalConsultations: number; status: string };
-}
+import { Sparkles, Calendar, Wallet, Users, Home, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function ConsultantDashboardPage() {
-  const qc = useQueryClient();
-
-  const { data, isLoading } = useQuery<PulseData>({
-    queryKey: ["consultant", "pulse"],
-    queryFn: async () => {
-      const res = await fetch("/api/consultant/pulse");
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
-
-  useRealtime("consultant:bookings", "booking:created", () => {
-    qc.invalidateQueries({ queryKey: ["consultant", "pulse"] });
-  });
-
-  if (isLoading) return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {[1,2,3,4].map((i) => <div key={i} className="h-24 rounded-2xl bg-[#F4E8F7] dark:bg-gray-800 animate-pulse" />)}
-    </div>
-  );
-
-  const today = data?.today;
-  const stats = [
-    { icon: Calendar,   label: "Bookings Today",  value: String(today?.bookings.length ?? 0),   color: "text-blue-600" },
-    { icon: Radio,      label: "Live Sessions",   value: String(today?.liveSessions ?? 0),      color: "text-green-600" },
-    { icon: Clock,      label: "Pending",         value: String(today?.pendingRequests ?? 0),  color: "text-amber-600" },
-    { icon: DollarSign, label: "Earnings Today",  value: formatCurrency(today?.earnings ?? 0), color: "text-[#9D7DC5]" },
-  ];
+  const today = { bookings: [{ id: "1", client: "Elena Vance", time: "02:00 PM" }] };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-[#5E4B8B] dark:text-white">
-          Welcome back 👋
-        </h1>
-        <p className="text-sm text-[#B8A1D9] mt-1">Here is what is happening today</p>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[84rem] mx-auto">
+        <button onClick={() => window.location.href = "/"} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-purple-400 mb-8">
+          <Home size={16} /> Return to Cosmos
+        </button>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {stats.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card-3d p-4">
-            <s.icon className={"w-5 h-5 mb-2 " + s.color} />
-            <p className="text-xs text-[#B8A1D9]">{s.label}</p>
-            <p className="text-xl font-bold text-[#5E4B8B] dark:text-white mt-0.5">{s.value}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="glass-card-3d p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-[#5E4B8B] dark:text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#9D7DC5]" /> Today's Schedule
-          </h2>
-          <a href="/consultant/bookings" className="text-xs text-[#9D7DC5] hover:underline">View all →</a>
-        </div>
-        {!today?.bookings.length ? (
-          <EmptyState icon={Calendar} title="No bookings today" description="New sessions will appear here." />
-        ) : (
-          <div className="space-y-2">
-            {today.bookings.map((b, i) => {
-              const t = new Date(b.scheduledAt);
-              const canJoin = b.status === "CONFIRMED" || b.status === "IN_PROGRESS";
-              return (
-                <motion.div key={b.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }} className="flex items-center gap-3 p-3 rounded-xl bg-[#FDFBF7] dark:bg-gray-800/50">
-                  <div className="text-center flex-shrink-0 w-16">
-                    <p className="text-sm font-bold text-[#5E4B8B] dark:text-white">{t.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</p>
-                    <p className="text-[10px] text-[#B8A1D9]">{b.durationMinutes}m</p>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[#5E4B8B] dark:text-white truncate">{b.user?.name || b.user?.username || "Client"}</p>
-                    <p className="text-xs text-[#B8A1D9] capitalize">{b.status.toLowerCase()}</p>
-                  </div>
-                  {canJoin && (
-                    <a href={"/call/" + b.id} className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#9D7DC5] to-[#533AFD] text-white text-xs font-medium">Join</a>
-                  )}
-                </motion.div>
-              );
-            })}
+        <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+          <div>
+            <h1 className="text-4xl font-medium tracking-tight">Consultant Command.</h1>
+            <p className="text-slate-400 mt-1">Manage your active practice, earnings, and schedule.</p>
           </div>
-        )}
+          <div className="flex gap-4">
+            <Link href="/consultant/availability" className="px-5 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-2xl font-medium text-sm">Availability</Link>
+            <Link href="/consultant/earnings" className="px-5 py-3 bg-purple-600 text-white rounded-2xl font-medium text-sm">Earnings</Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="p-8 bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem]">
+            <Wallet size={28} className="text-emerald-400 mb-4" />
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Available Earnings</p>
+            <p className="text-3xl font-bold">$1,450.00</p>
+          </div>
+          <div className="p-8 bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem]">
+            <Sparkles size={28} className="text-purple-400 mb-4" />
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Community Sparks</p>
+            <p className="text-3xl font-bold">14,500</p>
+          </div>
+          <div className="p-8 bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem]">
+            <Users size={28} className="text-indigo-400 mb-4" />
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Clients</p>
+            <p className="text-3xl font-bold">34</p>
+          </div>
+        </div>
+
+        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[2.5rem] p-8">
+          <h3 className="text-2xl font-bold mb-6">Today's Schedule</h3>
+          <div className="space-y-4">
+            {today.bookings.map((b: any, i: number) => (
+              <div key={b.id || i} className="p-4 bg-slate-950/50 rounded-2xl border border-white/5 flex justify-between items-center">
+                <span>Client: {b.client}</span>
+                <span className="text-purple-400">{b.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-

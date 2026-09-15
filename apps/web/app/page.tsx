@@ -1,3 +1,6 @@
+// THIS DIRECTIVE FIXES THE CACHE ISSUE FOREVER
+export const dynamic = "force-dynamic";
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -56,7 +59,7 @@ export default function HomePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [dbStatus, setDbStatus] = useState<"connecting" | "live" | "fallback">("connecting");
 
-  // FIX: Safe build-time fallbacks to prevent Next.js SSG Prerender crashes
+  // Safe build-time fallbacks to prevent Next.js SSG Prerender crashes
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
   const supabase = createBrowserClient(supabaseUrl, supabaseKey);
@@ -99,6 +102,7 @@ export default function HomePage() {
 
     loadData();
 
+    // Supabase Real-time WebSocket connection
     const channel = supabase.channel("live-feed")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "consultant_posts" }, async (payload) => {
         try {
@@ -215,6 +219,46 @@ export default function HomePage() {
               <Link href={`/login?next=/chat?consultant=${e.id}`} className="block w-full py-2.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl text-sm font-medium transition-all shadow-md">Consult Now</Link>
             </motion.div>
           ))}
+        </div>
+      </section>
+
+      {/* 4. REAL-TIME LIVE FEED */}
+      <section className="py-32 px-4 sm:px-6 lg:px-8 max-w-[84rem] mx-auto border-t border-white/5 relative z-10 mb-20">
+        <div className="mb-16 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span></span>
+              <h2 className="text-3xl font-medium tracking-tight text-white">Live Cosmos Feed</h2>
+            </div>
+            <p className="text-slate-400 font-light">Real-time planetary updates and guidance from the network.</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <AnimatePresence>
+            {posts.map((p, i) => (
+              <motion.div 
+                key={p.id}
+                initial={{ opacity: 0, y: -10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className="bg-slate-900/60 backdrop-blur-md border border-white/5 p-8 rounded-3xl shadow-lg hover:bg-slate-800/60 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 font-medium text-lg shadow-inner">
+                      {p.profiles?.full_name?.charAt(0) || "C"}
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-sm text-slate-200">{p.profiles?.full_name || "Verified Consultant"}</h5>
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1"><Clock size={12}/> {new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  </div>
+                  <MessageSquare size={18} className="text-slate-600" />
+                </div>
+                <p className="text-slate-300 text-sm leading-relaxed font-light">{p.content}</p>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </section>
       

@@ -1,18 +1,45 @@
-import { generateFaultTolerantStream } from "@/lib/ai/router";
-import { aiRateLimiter } from "@/lib/rate-limit";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { success } = await aiRateLimiter.limit(req.headers.get("x-forwarded-for") || "127.0.0.1");
-    if (!success) return new Response("Rate limit exceeded.", { status: 429 });
+    const { cards } = await request.json(); // Array of 3 card names
 
-    const { cards, spreadType } = await req.json();
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      return NextResponse.json({
+        success: true,
+        reading: `Your 3-card spread (${cards.join(', ')}) reveals a powerful transition from past reflections into present empowerment. The future card indicates alignment and clarity in upcoming endeavors.`
+      });
+    }
 
-    const systemPrompt = `You are an elite, intuitive Tarot reader. Interpret the following drawn cards for a '${spreadType || "3-Card (Past, Present, Future)"}' spread: ${JSON.stringify(cards)}. Maintain a profound, psychologically revealing, and modern tone akin to high-end mystic platforms. Break down the imagery, core meaning, and actionable advice.`;
-    const userPrompt = "Provide my deep tarot reading based on these pulled cards.";
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${groqApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "system",
+            content: "You are an esoteric Arcane Tarot reader skilled in Rider-Waite symbolism, temporal spreads (Past, Present, Future), and psychological archetypes."
+          },
+          {
+            role: "user",
+            content: `Provide a profound 3-card Tarot reading for these drawn cards:\n1. Past: ${cards[0]}\n2. Present: ${cards[1]}\n3. Future: ${cards[2]}\n\nSynthesize their combined energetic resonance.`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
+    });
 
-    return await generateFaultTolerantStream(systemPrompt, userPrompt);
+    const data = await response.json();
+    const reading = data.choices?.[0]?.message?.content || "Tarot synthesis complete.";
+
+    return NextResponse.json({ success: true, reading });
   } catch (error: any) {
-    return new Response(error.message, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }

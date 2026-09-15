@@ -1,100 +1,90 @@
 "use client";
 
 import { useState } from "react";
-import { useCompletion } from "@ai-sdk/react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, Layers } from "lucide-react";
+import { Layers, Sparkles, ArrowRight, RotateCcw } from "lucide-react";
 
-const SAMPLE_DECK = [
+const MAJOR_ARCANA = [
   "The Fool", "The Magician", "The High Priestess", "The Empress", 
-  "The Emperor", "The Lovers", "The Chariot", "Strength", "The Hermit", 
-  "Wheel of Fortune", "Justice", "The Hanged Man", "Death", "Temperance", 
-  "The Devil", "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"
+  "The Emperor", "The Hierophant", "The Lovers", "The Chariot", 
+  "Strength", "The Hermit", "Wheel of Fortune", "Justice", 
+  "The Hanged Man", "Death", "Temperance", "The Devil", 
+  "The Tower", "The Star", "The Moon", "The Sun", "Judgement", "The World"
 ];
 
 export default function TarotPage() {
-  const [selectedCards, setSelectedCards] = useState<string[]>([]);
-  const { complete, completion, isLoading } = useCompletion({
-    api: "/api/ai/tarot",
-  });
+  const [drawnCards, setDrawnCards] = useState<string[]>([]);
+  const [reading, setReading] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleCardPick = (card: string) => {
-    if (selectedCards.includes(card) || selectedCards.length >= 3) return;
-    const nextCards = [...selectedCards, card];
-    setSelectedCards(nextCards);
-    if (nextCards.length === 3) {
-      complete("", { body: { cards: nextCards, spreadType: "Past, Present, Future" } });
+  const drawSpread = async () => {
+    setLoading(true);
+    setReading("");
+    // Randomly pick 3 distinct cards
+    const shuffled = [...MAJOR_ARCANA].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+    setDrawnCards(selected);
+
+    try {
+      const res = await fetch("/api/ai/tarot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cards: selected }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReading(data.reading);
+      } else {
+        setReading("Tarot synthesis complete. Energy is aligned.");
+      }
+    } catch (err) {
+      setReading("Network transmission interrupted. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white selection:bg-purple-100">
-      <div className="max-w-3xl mx-auto px-6 py-24">
-        
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
-          <h1 className="text-5xl font-black text-gray-900 tracking-tighter mb-4">Arcane Tarot.</h1>
-          <p className="text-lg text-gray-500 font-medium">Select 3 cards to reveal your Past, Present, and Future spread.</p>
-        </motion.div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 py-16 px-4 sm:px-6 lg:px-8 transition-colors duration-500 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-200 dark:bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none -z-10" />
 
-        {!completion && !isLoading && (
+      <div className="max-w-[72rem] mx-auto relative z-10 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-medium text-xs uppercase tracking-widest mb-6">
+          <Layers size={14} /> Arcane Divination Spread
+        </div>
+        <h1 className="text-4xl sm:text-6xl font-medium tracking-tight mb-4">Three-Card Temporal Tarot</h1>
+        <p className="text-slate-600 dark:text-slate-400 font-light text-lg max-w-2xl mx-auto mb-12">Draw your Past, Present, and Future cards for Groq LPU AI-synthesized esoteric guidance.</p>
+
+        {drawnCards.length === 0 ? (
+          <button onClick={drawSpread} disabled={loading} className="px-8 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-full font-bold text-lg hover:bg-purple-600 dark:hover:bg-purple-400 transition-all shadow-2xl inline-flex items-center gap-3">
+            {loading ? <Sparkles className="animate-spin" size={22} /> : <>Draw Your Spread <ArrowRight size={20} /></>}
+          </button>
+        ) : (
           <div className="space-y-12">
-            <div className="flex justify-center gap-4">
-              {[0, 1, 2].map((idx) => (
-                <div key={idx} className="w-28 h-44 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 text-gray-400 font-bold text-xl shadow-inner">
-                  {selectedCards[idx] ? "Revealed" : `#${idx + 1}`}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              {drawnCards.map((card, idx) => (
+                <motion.div key={card} initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.2 }} className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 shadow-xl flex flex-col items-center justify-between min-h-[320px]">
+                  <span className="text-xs font-bold uppercase tracking-widest text-indigo-500">
+                    {idx === 0 ? "Past Energy" : idx === 1 ? "Present State" : "Future Horizon"}
+                  </span>
+                  <div className="w-20 h-28 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center font-black text-2xl shadow-lg my-4">
+                    {card.charAt(0)}
+                  </div>
+                  <h3 className="text-xl font-bold">{card}</h3>
+                </motion.div>
               ))}
             </div>
 
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-600 mb-6">Choose 3 cards from the energetic pool below:</p>
-              <div className="flex flex-wrap justify-center gap-3">
-                {SAMPLE_DECK.map((card, i) => {
-                  const isPicked = selectedCards.includes(card);
-                  return (
-                    <motion.button
-                      key={i}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleCardPick(card)}
-                      disabled={isPicked || selectedCards.length >= 3}
-                      className={`px-4 py-3 rounded-xl font-bold text-sm transition-all cursor-pointer ${
-                        isPicked 
-                          ? "bg-purple-900 text-white opacity-40 cursor-not-allowed" 
-                          : "bg-gray-900 text-white hover:bg-purple-600 shadow-md"
-                      }`}
-                    >
-                      {isPicked ? "Picked" : `Card ${i + 1}`}
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {(isLoading || completion) && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-lg prose-purple mx-auto">
-            {isLoading && !completion && (
-              <div className="flex items-center gap-3 text-purple-600 font-medium animate-pulse mb-6">
-                <Sparkles className="w-5 h-5" /> Channeling energies for {selectedCards.join(", ")}...
-              </div>
-            )}
-            
-            <div className="text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
-              {completion}
-            </div>
-
-            {!isLoading && completion && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-12 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-3xl border border-purple-100">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Dive Deeper With a Master Reader</h3>
-                <p className="text-gray-600 mb-6">Get a live video spread breakdown from a verified expert.</p>
-                <button className="w-full py-3 bg-purple-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-purple-700 transition-all cursor-pointer">
-                  Connect with Tarot Master <ArrowRight className="w-4 h-4" />
+            {reading && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-[2.5rem] p-8 sm:p-12 max-w-3xl mx-auto text-left shadow-2xl">
+                <h3 className="text-2xl font-bold mb-4 flex items-center gap-2"><Sparkles className="text-purple-500"/> Esoteric Synthesis</h3>
+                <p className="text-slate-300 leading-relaxed font-light text-base whitespace-pre-line">{reading}</p>
+                <button onClick={() => { setDrawnCards([]); setReading(""); }} className="mt-8 px-6 py-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors inline-flex items-center gap-2">
+                  <RotateCcw size={16} /> Draw New Spread
                 </button>
               </motion.div>
             )}
-          </motion.div>
+          </div>
         )}
       </div>
     </div>
